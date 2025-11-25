@@ -1,12 +1,4 @@
-export interface MeetingTypes {
-  id: number;
-  title: string;
-  date: string;
-  time: string;
-  location: string;
-  participants: string;
-  description: string;
-}
+
 
 export interface UserLoginCredentials {
   user: string;
@@ -57,4 +49,19 @@ export interface AuthResponse {
     displayName?: string;
     groups?: string[];
   };
+}
+// src/types/auth.types.ts
+export interface MeetingTypes {
+  id?: number;
+  title: string;
+  date: string;
+  time: string;
+  location?: string;
+  participants?: string[];
+  description?: string;
+  organizer?: string;
+  status?: string;
+  duration?: number;
+  created_at?: string;
+  updated_at?: string;
 }
