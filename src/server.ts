@@ -1,9 +1,11 @@
 import express from "express";
-import type { Request, Response } from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import authRoutes from "./routes/authRoutes.js";
-import meetingRoutes from "./routes/meetingRoutes.js";
+import type { Request, Response } from "express";
+import  { authRouter }  from "./routes/auth.routes.js";
+import  { meetingRouter } from "./routes/meeting.routes.js";
+import  { userRouter }  from "./routes/user.routes.js";
+import  { adminRouter }  from "./routes/admin.routes.js";
 
 dotenv.config();
 
@@ -14,7 +16,7 @@ server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 
 server.get("/", (req: Request, res: Response) => {
-  res.send("Servidor funcionando! Bem vindo!");
+  res.send("Servidor funcionando!");
 });
 
 server.get("/health", (req: Request, res: Response) => {
@@ -26,8 +28,10 @@ server.get("/health", (req: Request, res: Response) => {
   });
 });
 
-server.use("/api/auth", authRoutes);
-server.use("/api/meetings", meetingRoutes);
+server.use("/api/auth", authRouter);
+server.use("/api/meetings", meetingRouter);
+server.use("/admin", adminRouter);
+server.use("/user", userRouter);
 
 server.use((req: Request, res: Response) => {
   res.status(404).json({
@@ -79,5 +83,3 @@ const startServer = async () => {
 };
 
 startServer();
-
-export default server;

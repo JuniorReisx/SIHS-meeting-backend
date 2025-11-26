@@ -50,7 +50,22 @@ export interface AuthResponse {
     groups?: string[];
   };
 }
-// src/types/auth.types.ts
+
+export interface AdminTypes {
+  id: number;
+  username: string;
+  password?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface AdminResponse {
+  id: number;
+  username: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface MeetingTypes {
   id?: number;
   title: string;

@@ -2,7 +2,7 @@ import type { Request, Response } from "express";
 import { ldapService } from "../services/ldapService.js";
 import type { LoginRequest, AuthResponse } from "../types/auth.types.js";
 
-export class AuthController {
+class AuthController {
   /**
    * POST /api/auth/login
    * Autentica usuário via LDAP
