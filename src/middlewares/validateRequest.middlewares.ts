@@ -29,7 +29,7 @@ export const validateLoginRequest = (
     return res.status(400).json({
       success: false,
       message: "Dados inválidos",
-      errors
+      errors,
     });
   }
 

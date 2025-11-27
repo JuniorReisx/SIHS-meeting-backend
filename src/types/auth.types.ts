@@ -1,5 +1,3 @@
-
-
 export interface UserLoginCredentials {
   user: string;
   password: string;

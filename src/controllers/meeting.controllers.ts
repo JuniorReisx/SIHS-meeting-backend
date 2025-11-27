@@ -1,253 +1,459 @@
-import type { Request, Response } from "express";
-import { Meeting } from "../models/meeting.models.js";
-import type { MeetingTypes } from "../types/auth.types.js";
+import { Request, Response } from "express";
+import Meeting from "../models/meeting.models";
 
 export class MeetingController {
-  async create(req: Request, res: Response) {
-    try {
-      const { title, date, time, location, participants, description } = req.body;
+  private readonly MIN_TITLE_LENGTH = 3;
+  private readonly MAX_TITLE_LENGTH = 200;
+  private readonly MIN_DESCRIPTION_LENGTH = 10;
+  private readonly MIN_PARTICIPANTS = 1;
 
-      if (!title || !date || !time || !location || !participants || !description) {
+  private validateTitle(title: string): { valid: boolean; error?: string } {
+    if (!title || title.trim().length < this.MIN_TITLE_LENGTH) {
+      return {
+        valid: false,
+        error: `Título deve ter no mínimo ${this.MIN_TITLE_LENGTH} caracteres`,
+      };
+    }
+
+    if (title.length > this.MAX_TITLE_LENGTH) {
+      return {
+        valid: false,
+        error: `Título deve ter no máximo ${this.MAX_TITLE_LENGTH} caracteres`,
+      };
+    }
+
+    return { valid: true };
+  }
+
+  private validateDate(data: string): { valid: boolean; error?: string } {
+    const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+
+    if (!data || !dateRegex.test(data)) {
+      return {
+        valid: false,
+        error: "Data deve estar no formato YYYY-MM-DD",
+      };
+    }
+
+    const meetingDate = new Date(data);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    if (meetingDate < today) {
+      return {
+        valid: false,
+        error: "Data não pode ser no passado",
+      };
+    }
+
+    return { valid: true };
+  }
+
+  private validateTime(time: string): { valid: boolean; error?: string } {
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9](:[0-5][0-9])?$/;
+
+    if (!time || !timeRegex.test(time)) {
+      return {
+        valid: false,
+        error: "Horário deve estar no formato HH:MM ou HH:MM:SS",
+      };
+    }
+
+    return { valid: true };
+  }
+
+  private validateTimeRange(
+    inicialHora: string,
+    finalHora: string
+  ): { valid: boolean; error?: string } {
+    const inicial = inicialHora.split(":").map(Number);
+    const final = finalHora.split(":").map(Number);
+
+    const inicialMinutes = inicial[0] * 60 + inicial[1];
+    const finalMinutes = final[0] * 60 + final[1];
+
+    if (finalMinutes <= inicialMinutes) {
+      return {
+        valid: false,
+        error: "Horário final deve ser posterior ao horário inicial",
+      };
+    }
+
+    return { valid: true };
+  }
+
+  private validateDescription(descricao: string): {
+    valid: boolean;
+    error?: string;
+  } {
+    if (!descricao || descricao.trim().length < this.MIN_DESCRIPTION_LENGTH) {
+      return {
+        valid: false,
+        error: `Descrição deve ter no mínimo ${this.MIN_DESCRIPTION_LENGTH} caracteres`,
+      };
+    }
+
+    return { valid: true };
+  }
+
+  private validateParticipants(qparticipants: number): {
+    valid: boolean;
+    error?: string;
+  } {
+    if (!qparticipants || qparticipants < this.MIN_PARTICIPANTS) {
+      return {
+        valid: false,
+        error: `Quantidade de participantes deve ser no mínimo ${this.MIN_PARTICIPANTS}`,
+      };
+    }
+
+    if (!Number.isInteger(qparticipants)) {
+      return {
+        valid: false,
+        error: "Quantidade de participantes deve ser um número inteiro",
+      };
+    }
+
+    return { valid: true };
+  }
+
+  async create(req: Request, res: Response): Promise<Response> {
+    try {
+      const {
+        title,
+        data,
+        inicialHora,
+        finalHora,
+        local,
+        qparticipants,
+        descricao,
+      } = req.body;
+
+      if (
+        !title ||
+        !data ||
+        !inicialHora ||
+        !finalHora ||
+        !local ||
+        !qparticipants ||
+        !descricao
+      ) {
         return res.status(400).json({
           success: false,
-          message: "Todos os campos são obrigatórios"
+          message: "Todos os campos são obrigatórios",
+        });
+      }
+
+      const titleValidation = this.validateTitle(title);
+      if (!titleValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: titleValidation.error,
+        });
+      }
+
+      const dateValidation = this.validateDate(data);
+      if (!dateValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: dateValidation.error,
+        });
+      }
+
+      const inicialHoraValidation = this.validateTime(inicialHora);
+      if (!inicialHoraValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: `Horário inicial inválido: ${inicialHoraValidation.error}`,
+        });
+      }
+
+      const finalHoraValidation = this.validateTime(finalHora);
+      if (!finalHoraValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: `Horário final inválido: ${finalHoraValidation.error}`,
+        });
+      }
+
+      const timeRangeValidation = this.validateTimeRange(
+        inicialHora,
+        finalHora
+      );
+      if (!timeRangeValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: timeRangeValidation.error,
+        });
+      }
+
+      const descriptionValidation = this.validateDescription(descricao);
+      if (!descriptionValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: descriptionValidation.error,
+        });
+      }
+
+      const participantsValidation = this.validateParticipants(
+        Number(qparticipants)
+      );
+      if (!participantsValidation.valid) {
+        return res.status(400).json({
+          success: false,
+          message: participantsValidation.error,
         });
       }
 
       const meeting = await Meeting.create({
-        title,
-        date,
-        time,
-        location,
-        participants,
-        description
+        title: title.trim(),
+        data,
+        inicialHora,
+        finalHora,
+        local: local.trim(),
+        qparticipants: Number(qparticipants),
+        descricao: descricao.trim(),
       });
-
-      if (!meeting) {
-        return res.status(500).json({
-          success: false,
-          message: "Erro ao criar reunião"
-        });
-      }
 
       return res.status(201).json({
         success: true,
         message: "Reunião criada com sucesso",
-        data: meeting
+        data: meeting,
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao criar reunião:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno ao criar reunião"
+        message: "Erro interno do servidor",
       });
     }
   }
 
-  async findAll(req: Request, res: Response) {
+  async findAll(req: Request, res: Response): Promise<Response> {
     try {
-      const meetings = await Meeting.findAll();
+      const meetings = await Meeting.findAll({
+        order: [
+          ["data", "ASC"],
+          ["inicialHora", "ASC"],
+        ],
+      });
 
       return res.status(200).json({
         success: true,
-        message: "Reuniões recuperadas com sucesso",
         data: meetings,
-        count: meetings.length
       });
-
-    } catch (error: any) {
-      console.error("Erro ao buscar reuniões:", error);
+    } catch (error) {
+      console.error("Erro ao listar reuniões:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar reuniões"
+        message: "Erro interno do servidor",
       });
     }
   }
 
-  async findById(req: Request, res: Response) {
+  async findById(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
-      if (!id || isNaN(Number(id))) {
-        return res.status(400).json({
-          success: false,
-          message: "ID inválido"
-        });
-      }
-
-      const meeting = await Meeting.findById(Number(id));
+      const meeting = await Meeting.findByPk(id);
 
       if (!meeting) {
         return res.status(404).json({
           success: false,
-          message: "Reunião não encontrada"
+          message: "Reunião não encontrada",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: "Reunião encontrada",
-        data: meeting
+        data: meeting,
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao buscar reunião:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar reunião"
+        message: "Erro interno do servidor",
       });
     }
   }
 
-  async update(req: Request, res: Response) {
+  async update(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
-      const { title, date, time, location, participants, description } = req.body;
+      const {
+        title,
+        data,
+        inicialHora,
+        finalHora,
+        local,
+        qparticipants,
+        descricao,
+      } = req.body;
 
-      if (!id || isNaN(Number(id))) {
-        return res.status(400).json({
-          success: false,
-          message: "ID inválido"
-        });
-      }
+      const meeting = await Meeting.findByPk(id);
 
-      const existingMeeting = await Meeting.findById(Number(id));
-      if (!existingMeeting) {
+      if (!meeting) {
         return res.status(404).json({
           success: false,
-          message: "Reunião não encontrada"
+          message: "Reunião não encontrada",
         });
       }
 
-      const updateData: Partial<MeetingTypes> = {};
-      if (title) updateData.title = title;
-      if (date) updateData.date = date;
-      if (time) updateData.time = time;
-      if (location) updateData.location = location;
-      if (participants) updateData.participants = participants;
-      if (description) updateData.description = description;
-
-      const updatedMeeting = await Meeting.update(Number(id), updateData);
-
-      if (!updatedMeeting) {
-        return res.status(500).json({
-          success: false,
-          message: "Erro ao atualizar reunião"
-        });
+      if (title !== undefined) {
+        const titleValidation = this.validateTitle(title);
+        if (!titleValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: titleValidation.error,
+          });
+        }
+        meeting.title = title.trim();
       }
+
+      if (data !== undefined) {
+        const dateValidation = this.validateDate(data);
+        if (!dateValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: dateValidation.error,
+          });
+        }
+        meeting.data = new Date(data);
+      }
+
+      if (inicialHora !== undefined) {
+        const inicialHoraValidation = this.validateTime(inicialHora);
+        if (!inicialHoraValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: `Horário inicial inválido: ${inicialHoraValidation.error}`,
+          });
+        }
+        meeting.inicialHora = inicialHora;
+      }
+
+      if (finalHora !== undefined) {
+        const finalHoraValidation = this.validateTime(finalHora);
+        if (!finalHoraValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: `Horário final inválido: ${finalHoraValidation.error}`,
+          });
+        }
+        meeting.finalHora = finalHora;
+      }
+
+      if (inicialHora !== undefined || finalHora !== undefined) {
+        const timeRangeValidation = this.validateTimeRange(
+          meeting.inicialHora,
+          meeting.finalHora
+        );
+        if (!timeRangeValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: timeRangeValidation.error,
+          });
+        }
+      }
+
+      if (local !== undefined) {
+        meeting.local = local.trim();
+      }
+
+      if (qparticipants !== undefined) {
+        const participantsValidation = this.validateParticipants(
+          Number(qparticipants)
+        );
+        if (!participantsValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: participantsValidation.error,
+          });
+        }
+        meeting.qparticipants = Number(qparticipants);
+      }
+
+      if (descricao !== undefined) {
+        const descriptionValidation = this.validateDescription(descricao);
+        if (!descriptionValidation.valid) {
+          return res.status(400).json({
+            success: false,
+            message: descriptionValidation.error,
+          });
+        }
+        meeting.descricao = descricao.trim();
+      }
+
+      await meeting.save();
 
       return res.status(200).json({
         success: true,
         message: "Reunião atualizada com sucesso",
-        data: updatedMeeting
+        data: meeting,
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao atualizar reunião:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao atualizar reunião"
+        message: "Erro interno do servidor",
       });
     }
   }
 
-  async delete(req: Request, res: Response) {
+  async delete(req: Request, res: Response): Promise<Response> {
     try {
       const { id } = req.params;
 
-      if (!id || isNaN(Number(id))) {
-        return res.status(400).json({
-          success: false,
-          message: "ID inválido"
-        });
-      }
+      const meeting = await Meeting.findByPk(id);
 
-      const existingMeeting = await Meeting.findById(Number(id));
-      if (!existingMeeting) {
+      if (!meeting) {
         return res.status(404).json({
           success: false,
-          message: "Reunião não encontrada"
+          message: "Reunião não encontrada",
         });
       }
 
-      const deleted = await Meeting.delete(Number(id));
-
-      if (!deleted) {
-        return res.status(500).json({
-          success: false,
-          message: "Erro ao deletar reunião"
-        });
-      }
+      await meeting.destroy();
 
       return res.status(200).json({
         success: true,
-        message: "Reunião deletada com sucesso"
+        message: "Reunião deletada com sucesso",
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao deletar reunião:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao deletar reunião"
+        message: "Erro interno do servidor",
       });
     }
   }
 
-  async findByDate(req: Request, res: Response) {
+  async findByDate(req: Request, res: Response): Promise<Response> {
     try {
-      const { date } = req.params;
+      const { data } = req.params;
 
-      if (!date) {
+      const dateValidation = this.validateDate(data);
+      if (!dateValidation.valid) {
         return res.status(400).json({
           success: false,
-          message: "Data é obrigatória"
+          message: dateValidation.error,
         });
       }
 
-      const meetings = await Meeting.findByDate(date);
+      const meetings = await Meeting.findAll({
+        where: { data },
+        order: [["inicialHora", "ASC"]],
+      });
 
       return res.status(200).json({
         success: true,
-        message: "Reuniões encontradas",
         data: meetings,
-        count: meetings.length
       });
-
-    } catch (error: any) {
+    } catch (error) {
       console.error("Erro ao buscar reuniões por data:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar reuniões"
-      });
-    }
-  }
-
-  async findByParticipant(req: Request, res: Response) {
-    try {
-      const { name } = req.params;
-
-      if (!name) {
-        return res.status(400).json({
-          success: false,
-          message: "Nome do participante é obrigatório"
-        });
-      }
-
-      const meetings = await Meeting.findByParticipant(name);
-
-      return res.status(200).json({
-        success: true,
-        message: "Reuniões encontradas",
-        data: meetings,
-        count: meetings.length
-      });
-
-    } catch (error: any) {
-      console.error("Erro ao buscar reuniões por participante:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Erro ao buscar reuniões"
+        message: "Erro interno do servidor",
       });
     }
   }

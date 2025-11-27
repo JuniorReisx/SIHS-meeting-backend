@@ -1,30 +1,28 @@
 import { DataTypes, Model, Optional } from "sequelize";
 import { database } from "../data/database";
 
-interface UserAttributes {
+interface AdminAttributes {
   id: number;
   username: string;
   password: string;
-  setor: string;
   createdAt?: Date;
   updatedAt?: Date;
 }
 
-interface UserCreationAttributes extends Optional<UserAttributes, "id"> {}
+interface AdminCreationAttributes extends Optional<AdminAttributes, "id"> {}
 
-class User
-  extends Model<UserAttributes, UserCreationAttributes>
-  implements UserAttributes
+class Admin
+  extends Model<AdminAttributes, AdminCreationAttributes>
+  implements AdminAttributes
 {
   public id!: number;
   public username!: string;
   public password!: string;
-  public setor!: string;
   public readonly createdAt!: Date;
   public readonly updatedAt!: Date;
 }
 
-User.init(
+Admin.init(
   {
     id: {
       type: DataTypes.INTEGER,
@@ -32,36 +30,24 @@ User.init(
       autoIncrement: true,
     },
     username: {
-      type: DataTypes.STRING(100),
+      type: DataTypes.STRING(50),
       allowNull: false,
-      unique: true,
-      validate: {
-        len: {
-          args: [3, 100],
-          msg: "Username deve ter entre 3 e 100 caracteres",
-        },
+      unique: {
+        name: "unique_username",
+        msg: "Username já existe",
       },
     },
     password: {
       type: DataTypes.STRING(255),
       allowNull: false,
     },
-    setor: {
-      type: DataTypes.STRING(100),
-      allowNull: false,
-      validate: {
-        notEmpty: {
-          msg: "Setor não pode ser vazio",
-        },
-      },
-    },
   },
   {
     sequelize: database,
-    tableName: "users",
+    tableName: "admins",
     timestamps: true,
     underscored: false,
   }
 );
 
-export default User;
+export default Admin;

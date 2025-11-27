@@ -1,23 +1,13 @@
 import * as ldap from "ldapjs";
 import type { Client, Error as LDAPError } from "ldapjs";
 
-// ============================================
-// CONFIGURAÇÃO LDAP - SIHS
-// ============================================
-// Baseada no resultado do whoami /fqdn:
-// CN=...,OU=CSM,OU=Usuarios,OU=SIHS,DC=sihs,DC=local
-
 const LDAP_CONFIG = {
-  url: "ldap://10.160.240.244:389", // IP do servidor AD
-  baseDN: "DC=sihs,DC=local", // Domínio base
-  userOU: "OU=CSM,OU=Usuarios,OU=SIHS", // Estrutura de OUs completa
+  url: "ldap://10.160.240.244:389",
+  baseDN: "DC=sihs,DC=local",
+  userOU: "OU=CSM,OU=Usuarios,OU=SIHS",
   timeout: 5000,
   connectTimeout: 5000,
 };
-
-/**
- * Interface para resultado da autenticação com mais detalhes
- */
 export interface AuthResult {
   success: boolean;
   message?: string;
@@ -34,36 +24,30 @@ export async function loginLDAP(
   username: string,
   password: string
 ): Promise<boolean> {
-  // Validação básica
   if (!username || !password) {
     console.error("❌ Usuário e senha são obrigatórios");
     return false;
   }
 
-  // Sanitização do username (remove espaços e caracteres especiais)
   const sanitizedUsername = username.trim().replace(/[,=]/g, "");
 
-  // Criar cliente LDAP
   const client: Client = ldap.createClient({
     url: LDAP_CONFIG.url,
     timeout: LDAP_CONFIG.timeout,
     connectTimeout: LDAP_CONFIG.connectTimeout,
   });
 
-  // Montar o DN completo do usuário
   const userDN = `CN=${sanitizedUsername},${LDAP_CONFIG.userOU},${LDAP_CONFIG.baseDN}`;
 
   console.log("🔐 Tentando autenticar com DN:", userDN);
 
   return new Promise((resolve) => {
-    // Timeout de segurança
     const timeoutId = setTimeout(() => {
       console.error("⏱️ Timeout na conexão LDAP");
       client.unbind();
       resolve(false);
     }, LDAP_CONFIG.timeout);
 
-    // Tratamento de erros de conexão
     client.on("error", (err) => {
       console.error("❌ Erro de conexão LDAP:", err.message);
       clearTimeout(timeoutId);
@@ -71,11 +55,9 @@ export async function loginLDAP(
       resolve(false);
     });
 
-    // Tentar autenticar
     client.bind(userDN, password, (error: LDAPError | null) => {
       clearTimeout(timeoutId);
 
-      // Sempre fechar a conexão
       client.unbind((unbindError) => {
         if (unbindError) {
           console.warn("⚠️ Erro ao desconectar:", unbindError.message);
@@ -83,7 +65,6 @@ export async function loginLDAP(
       });
 
       if (error) {
-        // Tratamento de erros específicos
         if (error.message.includes("Invalid Credentials")) {
           console.error("❌ Credenciais inválidas para:", sanitizedUsername);
         } else if (error.message.includes("timeout")) {
@@ -100,9 +81,6 @@ export async function loginLDAP(
   });
 }
 
-/**
- * Versão alternativa que retorna mais informações
- */
 export async function loginLDAPDetailed(
   username: string,
   password: string
@@ -118,9 +96,6 @@ export async function loginLDAPDetailed(
   };
 }
 
-/**
- * Testa a conexão com o servidor LDAP
- */
 export async function testLDAPConnection(): Promise<boolean> {
   const client = ldap.createClient({
     url: LDAP_CONFIG.url,
