@@ -1,376 +1,270 @@
-import { Request, Response } from "express";
-import User from "../models/user.models";
-import bcrypt from "bcrypt";
+import type { Request, Response } from "express";
+import { User } from "../models/user.models.js";
 
 export class UserController {
-  private readonly SALT_ROUNDS = 12;
-  private readonly MIN_PASSWORD_LENGTH = 8;
-  private readonly MIN_USERNAME_LENGTH = 3;
+  // Criar usuário
+  async create(req: Request, res: Response) {
+    try {
+      const { username, password, department } = req.body;
 
-  private validateUsername(username: string): {
-    valid: boolean;
-    error?: string;
-  } {
-    if (!username || username.trim().length < this.MIN_USERNAME_LENGTH) {
-      return {
-        valid: false,
-        error: `Username deve ter no mínimo ${this.MIN_USERNAME_LENGTH} caracteres`,
-      };
+      if (!username || !password || !department) {
+        return res.status(400).json({
+          success: false,
+          message: "Username, password e department são obrigatórios"
+        });
+      }
+
+      // Verificar se username já existe
+      const existingUser = await User.findByUsername(username);
+      if (existingUser) {
+        return res.status(409).json({
+          success: false,
+          message: "Username já está em uso"
+        });
+      }
+
+      const user = await User.create(username, password, department);
+
+      if (!user) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao criar usuário"
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Usuário criado com sucesso",
+        data: {
+          id: user.id,
+          username: user.username,
+          department: user.department,
+          created_at: user.created_at
+        }
+      });
+
+    } catch (error: any) {
+      console.error("Erro ao criar usuário:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno ao criar usuário"
+      });
     }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return {
-        valid: false,
-        error: "Username só pode conter letras, números, _ e -",
-      };
-    }
-
-    return { valid: true };
   }
 
-  private validatePassword(password: string): {
-    valid: boolean;
-    error?: string;
-  } {
-    if (!password || password.length < this.MIN_PASSWORD_LENGTH) {
-      return {
-        valid: false,
-        error: `Senha deve ter no mínimo ${this.MIN_PASSWORD_LENGTH} caracteres`,
-      };
-    }
-
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    if (!(hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar)) {
-      return {
-        valid: false,
-        error:
-          "Senha deve conter: maiúscula, minúscula, número e caractere especial",
-      };
-    }
-
-    return { valid: true };
-  }
-
-  private validateSetor(setor: string): { valid: boolean; error?: string } {
-    if (!setor || setor.trim().length === 0) {
-      return {
-        valid: false,
-        error: "Setor é obrigatório",
-      };
-    }
-
-    return { valid: true };
-  }
-
-  private async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, this.SALT_ROUNDS);
-  }
-
-  private async comparePassword(
-    password: string,
-    hash: string
-  ): Promise<boolean> {
-    return await bcrypt.compare(password, hash);
-  }
-
-  async login(req: Request, res: Response): Promise<Response> {
+  // Login do usuário
+  async login(req: Request, res: Response) {
     try {
       const { username, password } = req.body;
 
       if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Username e password são obrigatórios",
+          message: "Username e password são obrigatórios"
         });
       }
 
-      const user = await User.findOne({ where: { username } });
+      const user = await User.login(username, password);
 
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: "Credenciais inválidas",
+          message: "Credenciais inválidas"
         });
       }
-
-      const isPasswordValid = await this.comparePassword(
-        password,
-        user.password
-      );
-
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          success: false,
-          message: "Credenciais inválidas",
-        });
-      }
-
-      const { password: _, ...userWithoutPassword } = user.toJSON();
 
       return res.status(200).json({
         success: true,
         message: "Login realizado com sucesso",
-        data: userWithoutPassword,
+        data: user
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao fazer login"
       });
     }
   }
 
-  async create(req: Request, res: Response): Promise<Response> {
+  // Buscar todos os usuários
+  async findAll(req: Request, res: Response) {
     try {
-      const { username, password, setor } = req.body;
-
-      if (!username || !password || !setor) {
-        return res.status(400).json({
-          success: false,
-          message: "Username, password e setor são obrigatórios",
-        });
-      }
-
-      const usernameValidation = this.validateUsername(username);
-      if (!usernameValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: usernameValidation.error,
-        });
-      }
-
-      const passwordValidation = this.validatePassword(password);
-      if (!passwordValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: passwordValidation.error,
-        });
-      }
-
-      const setorValidation = this.validateSetor(setor);
-      if (!setorValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: setorValidation.error,
-        });
-      }
-
-      const existingUser = await User.findOne({ where: { username } });
-      if (existingUser) {
-        return res.status(409).json({
-          success: false,
-          message: "Username já existe",
-        });
-      }
-
-      const hashedPassword = await this.hashPassword(password);
-
-      const user = await User.create({
-        username,
-        password: hashedPassword,
-        setor,
-      });
-
-      const { password: _, ...userWithoutPassword } = user.toJSON();
-
-      return res.status(201).json({
-        success: true,
-        message: "Usuário criado com sucesso",
-        data: userWithoutPassword,
-      });
-    } catch (error) {
-      console.error("Erro ao criar usuário:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Erro interno do servidor",
-      });
-    }
-  }
-
-  async findAll(req: Request, res: Response): Promise<Response> {
-    try {
-      const users = await User.findAll({
-        attributes: { exclude: ["password"] },
-        order: [["createdAt", "DESC"]],
-      });
+      const users = await User.findAll();
 
       return res.status(200).json({
         success: true,
+        message: "Usuários recuperados com sucesso",
         data: users,
-        count: users.length,
+        count: users.length
       });
-    } catch (error) {
-      console.error("Erro ao listar usuários:", error);
+
+    } catch (error: any) {
+      console.error("Erro ao buscar usuários:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao buscar usuários"
       });
     }
   }
 
-  async findById(req: Request, res: Response): Promise<Response> {
+  // Buscar usuário por ID
+  async findById(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido",
+          message: "ID inválido"
         });
       }
 
-      const user = await User.findByPk(id, {
-        attributes: { exclude: ["password"] },
-      });
+      const user = await User.findById(Number(id));
 
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado",
+          message: "Usuário não encontrado"
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: user,
+        message: "Usuário encontrado",
+        data: user
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao buscar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao buscar usuário"
       });
     }
   }
 
-  async findByUsername(req: Request, res: Response): Promise<Response> {
+  // Buscar usuário por username
+  async findByUsername(req: Request, res: Response) {
     try {
       const { username } = req.params;
 
       if (!username) {
         return res.status(400).json({
           success: false,
-          message: "Username é obrigatório",
+          message: "Username é obrigatório"
         });
       }
 
-      const user = await User.findOne({
-        where: { username },
-        attributes: { exclude: ["password"] },
-      });
+      const user = await User.findByUsername(username);
 
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado",
+          message: "Usuário não encontrado"
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: user,
+        message: "Usuário encontrado",
+        data: user
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao buscar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao buscar usuário"
       });
     }
   }
 
-  async findBySetor(req: Request, res: Response): Promise<Response> {
+  // Buscar usuários por departamento
+  async findByDepartment(req: Request, res: Response) {
     try {
-      const { setor } = req.params;
+      const { department } = req.params;
 
-      if (!setor) {
+      if (!department) {
         return res.status(400).json({
           success: false,
-          message: "Setor é obrigatório",
+          message: "Department é obrigatório"
         });
       }
 
-      const users = await User.findAll({
-        where: { setor },
-        attributes: { exclude: ["password"] },
-        order: [["username", "ASC"]],
-      });
+      const users = await User.findByDepartment(department);
 
       return res.status(200).json({
         success: true,
+        message: "Usuários encontrados",
         data: users,
-        count: users.length,
+        count: users.length
       });
-    } catch (error) {
-      console.error("Erro ao buscar usuários por setor:", error);
+
+    } catch (error: any) {
+      console.error("Erro ao buscar usuários por departamento:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao buscar usuários"
       });
     }
   }
 
-  async updateSetor(req: Request, res: Response): Promise<Response> {
+  // Atualizar departamento
+  async updateDepartment(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { setor } = req.body;
+      const { department } = req.body;
 
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido",
+          message: "ID inválido"
         });
       }
 
-      if (!setor) {
+      if (!department) {
         return res.status(400).json({
           success: false,
-          message: "Setor é obrigatório",
+          message: "Department é obrigatório"
         });
       }
 
-      const setorValidation = this.validateSetor(setor);
-      if (!setorValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: setorValidation.error,
-        });
-      }
-
-      const user = await User.findByPk(id);
-
-      if (!user) {
+      const existingUser = await User.findById(Number(id));
+      if (!existingUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado",
+          message: "Usuário não encontrado"
         });
       }
 
-      user.setor = setor;
-      await user.save();
+      const updatedUser = await User.updateDepartment(Number(id), department);
 
-      const { password: _, ...userWithoutPassword } = user.toJSON();
+      if (!updatedUser) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao atualizar departamento"
+        });
+      }
 
       return res.status(200).json({
         success: true,
-        message: "Setor atualizado com sucesso",
-        data: userWithoutPassword,
+        message: "Departamento atualizado com sucesso",
+        data: updatedUser
       });
-    } catch (error) {
-      console.error("Erro ao atualizar setor:", error);
+
+    } catch (error: any) {
+      console.error("Erro ao atualizar departamento:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao atualizar departamento"
       });
     }
   }
 
-  async updatePassword(req: Request, res: Response): Promise<Response> {
+  // Atualizar senha
+  async updatePassword(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const { newPassword } = req.body;
@@ -378,83 +272,87 @@ export class UserController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido",
+          message: "ID inválido"
         });
       }
 
       if (!newPassword) {
         return res.status(400).json({
           success: false,
-          message: "Nova senha é obrigatória",
+          message: "Nova senha é obrigatória"
         });
       }
 
-      const passwordValidation = this.validatePassword(newPassword);
-      if (!passwordValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: passwordValidation.error,
-        });
-      }
-
-      const user = await User.findByPk(id);
-
-      if (!user) {
+      const existingUser = await User.findById(Number(id));
+      if (!existingUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado",
+          message: "Usuário não encontrado"
         });
       }
 
-      const hashedPassword = await this.hashPassword(newPassword);
+      const updated = await User.updatePassword(Number(id), newPassword);
 
-      user.password = hashedPassword;
-      await user.save();
+      if (!updated) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao atualizar senha"
+        });
+      }
 
       return res.status(200).json({
         success: true,
-        message: "Senha atualizada com sucesso",
+        message: "Senha atualizada com sucesso"
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao atualizar senha:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao atualizar senha"
       });
     }
   }
 
-  async delete(req: Request, res: Response): Promise<Response> {
+  // Deletar usuário
+  async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido",
+          message: "ID inválido"
         });
       }
 
-      const user = await User.findByPk(id);
-
-      if (!user) {
+      const existingUser = await User.findById(Number(id));
+      if (!existingUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado",
+          message: "Usuário não encontrado"
         });
       }
 
-      await user.destroy();
+      const deleted = await User.delete(Number(id));
+
+      if (!deleted) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao deletar usuário"
+        });
+      }
 
       return res.status(200).json({
         success: true,
-        message: "Usuário deletado com sucesso",
+        message: "Usuário deletado com sucesso"
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao deletar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao deletar usuário"
       });
     }
   }

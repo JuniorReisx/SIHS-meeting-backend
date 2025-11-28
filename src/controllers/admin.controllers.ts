@@ -1,298 +1,229 @@
-import { Request, Response } from "express";
-import Admin from "../models/admin.model";
-import bcrypt from "bcrypt";
+import type { Request, Response } from "express";
+import { Admin } from "../models/admin.models.js";
 
 export class AdminController {
-  private readonly SALT_ROUNDS = 12;
-  private readonly MIN_PASSWORD_LENGTH = 8;
-  private readonly MIN_USERNAME_LENGTH = 3;
-
-  private validateUsername(username: string): {
-    valid: boolean;
-    error?: string;
-  } {
-    if (!username || username.trim().length < this.MIN_USERNAME_LENGTH) {
-      return {
-        valid: false,
-        error: `Username deve ter no mínimo ${this.MIN_USERNAME_LENGTH} caracteres`,
-      };
-    }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(username)) {
-      return {
-        valid: false,
-        error: "Username só pode conter letras, números, _ e -",
-      };
-    }
-
-    return { valid: true };
-  }
-
-  private validatePassword(password: string): {
-    valid: boolean;
-    error?: string;
-  } {
-    if (!password || password.length < this.MIN_PASSWORD_LENGTH) {
-      return {
-        valid: false,
-        error: `Senha deve ter no mínimo ${this.MIN_PASSWORD_LENGTH} caracteres`,
-      };
-    }
-
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSpecialChar = /[!@#$%^&*(),.?":{}|<>]/.test(password);
-
-    if (!(hasUpperCase && hasLowerCase && hasNumber && hasSpecialChar)) {
-      return {
-        valid: false,
-        error:
-          "Senha deve conter: maiúscula, minúscula, número e caractere especial",
-      };
-    }
-
-    return { valid: true };
-  }
-
-  private async hashPassword(password: string): Promise<string> {
-    return await bcrypt.hash(password, this.SALT_ROUNDS);
-  }
-
-  private async comparePassword(
-    password: string,
-    hash: string
-  ): Promise<boolean> {
-    return await bcrypt.compare(password, hash);
-  }
-
-  async login(req: Request, res: Response): Promise<Response> {
+  // Criar admin
+  async create(req: Request, res: Response) {
     try {
       const { username, password } = req.body;
 
       if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Username e password são obrigatórios",
+          message: "Username e password são obrigatórios"
         });
       }
 
-      const admin = await Admin.findOne({ where: { username } });
+      const admin = await Admin.create(username, password);
+
+      if (!admin) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao criar admin"
+        });
+      }
+
+      return res.status(201).json({
+        success: true,
+        message: "Admin criado com sucesso",
+        data: {
+          id: admin.id,
+          username: admin.username,
+          created_at: admin.created_at
+        }
+      });
+
+    } catch (error: any) {
+      console.error("Erro ao criar admin:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erro interno ao criar admin"
+      });
+    }
+  }
+
+  // Login do admin
+  async login(req: Request, res: Response) {
+    try {
+      const { username, password } = req.body;
+
+      if (!username || !password) {
+        return res.status(400).json({
+          success: false,
+          message: "Username e password são obrigatórios"
+        });
+      }
+
+      const admin = await Admin.login(username, password);
 
       if (!admin) {
         return res.status(401).json({
           success: false,
-          message: "Credenciais inválidas",
+          message: "Credenciais inválidas"
         });
       }
-
-      const isPasswordValid = await this.comparePassword(
-        password,
-        admin.password
-      );
-
-      if (!isPasswordValid) {
-        return res.status(401).json({
-          success: false,
-          message: "Credenciais inválidas",
-        });
-      }
-
-      const { password: _, ...adminWithoutPassword } = admin.toJSON();
 
       return res.status(200).json({
         success: true,
         message: "Login realizado com sucesso",
-        data: adminWithoutPassword,
+        data: admin
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao fazer login"
       });
     }
   }
 
-  async create(req: Request, res: Response): Promise<Response> {
+  // Buscar todos os admins
+  async findAll(req: Request, res: Response) {
     try {
-      const { username, password } = req.body;
-
-      if (!username || !password) {
-        return res.status(400).json({
-          success: false,
-          message: "Username e password são obrigatórios",
-        });
-      }
-
-      const usernameValidation = this.validateUsername(username);
-      if (!usernameValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: usernameValidation.error,
-        });
-      }
-
-      const passwordValidation = this.validatePassword(password);
-      if (!passwordValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: passwordValidation.error,
-        });
-      }
-
-      const existingAdmin = await Admin.findOne({ where: { username } });
-      if (existingAdmin) {
-        return res.status(409).json({
-          success: false,
-          message: "Username já existe",
-        });
-      }
-
-      const hashedPassword = await this.hashPassword(password);
-
-      const admin = await Admin.create({
-        username,
-        password: hashedPassword,
-      });
-
-      const { password: _, ...adminWithoutPassword } = admin.toJSON();
-
-      return res.status(201).json({
-        success: true,
-        message: "Administrador criado com sucesso",
-        data: adminWithoutPassword,
-      });
-    } catch (error) {
-      console.error("Erro ao criar admin:", error);
-      return res.status(500).json({
-        success: false,
-        message: "Erro interno do servidor",
-      });
-    }
-  }
-
-  async findAll(req: Request, res: Response): Promise<Response> {
-    try {
-      const admins = await Admin.findAll({
-        attributes: { exclude: ["password"] },
-        order: [["createdAt", "DESC"]],
-      });
+      const admins = await Admin.findAll();
 
       return res.status(200).json({
         success: true,
+        message: "Admins recuperados com sucesso",
         data: admins,
+        count: admins.length
       });
-    } catch (error) {
-      console.error("Erro ao listar admins:", error);
+
+    } catch (error: any) {
+      console.error("Erro ao buscar admins:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao buscar admins"
       });
     }
   }
 
-  async findById(req: Request, res: Response): Promise<Response> {
+  // Buscar admin por ID
+  async findById(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      const admin = await Admin.findByPk(id, {
-        attributes: { exclude: ["password"] },
-      });
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({
+          success: false,
+          message: "ID inválido"
+        });
+      }
+
+      const admin = await Admin.findById(Number(id));
 
       if (!admin) {
         return res.status(404).json({
           success: false,
-          message: "Administrador não encontrado",
+          message: "Admin não encontrado"
         });
       }
 
       return res.status(200).json({
         success: true,
-        data: admin,
+        message: "Admin encontrado",
+        data: admin
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao buscar admin:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao buscar admin"
       });
     }
   }
 
-  async updatePassword(req: Request, res: Response): Promise<Response> {
+  async updatePassword(req: Request, res: Response) {
     try {
       const { id } = req.params;
       const { newPassword } = req.body;
 
-      // Validar campo obrigatório
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({
+          success: false,
+          message: "ID inválido"
+        });
+      }
+
       if (!newPassword) {
         return res.status(400).json({
           success: false,
-          message: "Nova senha é obrigatória",
+          message: "Nova senha é obrigatória"
         });
       }
 
-      const passwordValidation = this.validatePassword(newPassword);
-      if (!passwordValidation.valid) {
-        return res.status(400).json({
-          success: false,
-          message: passwordValidation.error,
-        });
-      }
-
-      const admin = await Admin.findByPk(id);
-
-      if (!admin) {
+      const existingAdmin = await Admin.findById(Number(id));
+      if (!existingAdmin) {
         return res.status(404).json({
           success: false,
-          message: "Administrador não encontrado",
+          message: "Admin não encontrado"
         });
       }
 
-      const hashedPassword = await this.hashPassword(newPassword);
+      const updated = await Admin.updatePassword(Number(id), newPassword);
 
-      // Atualizar senha
-      admin.password = hashedPassword;
-      await admin.save();
+      if (!updated) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao atualizar senha"
+        });
+      }
 
       return res.status(200).json({
         success: true,
-        message: "Senha atualizada com sucesso",
+        message: "Senha atualizada com sucesso"
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao atualizar senha:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao atualizar senha"
       });
     }
   }
 
-  async delete(req: Request, res: Response): Promise<Response> {
+  // Deletar admin
+  async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
 
-      const admin = await Admin.findByPk(id);
-
-      if (!admin) {
-        return res.status(404).json({
+      if (!id || isNaN(Number(id))) {
+        return res.status(400).json({
           success: false,
-          message: "Administrador não encontrado",
+          message: "ID inválido"
         });
       }
 
-      await admin.destroy();
+      const existingAdmin = await Admin.findById(Number(id));
+      if (!existingAdmin) {
+        return res.status(404).json({
+          success: false,
+          message: "Admin não encontrado"
+        });
+      }
+
+      const deleted = await Admin.delete(Number(id));
+
+      if (!deleted) {
+        return res.status(500).json({
+          success: false,
+          message: "Erro ao deletar admin"
+        });
+      }
 
       return res.status(200).json({
         success: true,
-        message: "Administrador deletado com sucesso",
+        message: "Admin deletado com sucesso"
       });
-    } catch (error) {
+
+    } catch (error: any) {
       console.error("Erro ao deletar admin:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno do servidor",
+        message: "Erro ao deletar admin"
       });
     }
   }
