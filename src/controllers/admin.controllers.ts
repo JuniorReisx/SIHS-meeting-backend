@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import { Admin } from "../models/admin.models";
 
 export class AdminController {
-  // Criar admin
   async create(req: Request, res: Response) {
     try {
       const { username, password } = req.body;
@@ -10,7 +9,7 @@ export class AdminController {
       if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Username e password são obrigatórios"
+          message: "Username e password são obrigatórios",
         });
       }
 
@@ -19,7 +18,7 @@ export class AdminController {
       if (!admin) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao criar admin"
+          message: "Erro ao criar admin",
         });
       }
 
@@ -29,20 +28,18 @@ export class AdminController {
         data: {
           id: admin.id,
           username: admin.username,
-          createdAt: admin.createdAt // ✅ Mudado de created_at para createdAt
-        }
+          createdAt: admin.createdAt,
+        },
       });
-
     } catch (error: any) {
       console.error("Erro ao criar admin:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno ao criar admin"
+        message: "Erro interno ao criar admin",
       });
     }
   }
 
-  // Login do admin
   async login(req: Request, res: Response) {
     try {
       const { username, password } = req.body;
@@ -50,7 +47,7 @@ export class AdminController {
       if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Username e password são obrigatórios"
+          message: "Username e password são obrigatórios",
         });
       }
 
@@ -59,26 +56,24 @@ export class AdminController {
       if (!admin) {
         return res.status(401).json({
           success: false,
-          message: "Credenciais inválidas"
+          message: "Credenciais inválidas",
         });
       }
 
       return res.status(200).json({
         success: true,
         message: "Login realizado com sucesso",
-        data: admin
+        data: admin,
       });
-
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao fazer login"
+        message: "Erro ao fazer login",
       });
     }
   }
 
-  // Buscar todos os admins
   async findAll(req: Request, res: Response) {
     try {
       const admins = await Admin.findAll();
@@ -87,19 +82,17 @@ export class AdminController {
         success: true,
         message: "Admins recuperados com sucesso",
         data: admins,
-        count: admins.length
+        count: admins.length,
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar admins:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar admins"
+        message: "Erro ao buscar admins",
       });
     }
   }
 
-  // Buscar admin por ID
   async findById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -107,7 +100,7 @@ export class AdminController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
@@ -116,21 +109,20 @@ export class AdminController {
       if (!admin) {
         return res.status(404).json({
           success: false,
-          message: "Admin não encontrado"
+          message: "Admin não encontrado",
         });
       }
 
       return res.status(200).json({
         success: true,
         message: "Admin encontrado",
-        data: admin
+        data: admin,
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar admin:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar admin"
+        message: "Erro ao buscar admin",
       });
     }
   }
@@ -143,14 +135,14 @@ export class AdminController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
       if (!newPassword) {
         return res.status(400).json({
           success: false,
-          message: "Nova senha é obrigatória"
+          message: "Nova senha é obrigatória",
         });
       }
 
@@ -158,7 +150,7 @@ export class AdminController {
       if (!existingAdmin) {
         return res.status(404).json({
           success: false,
-          message: "Admin não encontrado"
+          message: "Admin não encontrado",
         });
       }
 
@@ -167,25 +159,23 @@ export class AdminController {
       if (!updated) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao atualizar senha"
+          message: "Erro ao atualizar senha",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: "Senha atualizada com sucesso"
+        message: "Senha atualizada com sucesso",
       });
-
     } catch (error: any) {
       console.error("Erro ao atualizar senha:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao atualizar senha"
+        message: "Erro ao atualizar senha",
       });
     }
   }
 
-  // Deletar admin
   async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -193,7 +183,7 @@ export class AdminController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
@@ -201,7 +191,7 @@ export class AdminController {
       if (!existingAdmin) {
         return res.status(404).json({
           success: false,
-          message: "Admin não encontrado"
+          message: "Admin não encontrado",
         });
       }
 
@@ -210,20 +200,19 @@ export class AdminController {
       if (!deleted) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao deletar admin"
+          message: "Erro ao deletar admin",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: "Admin deletado com sucesso"
+        message: "Admin deletado com sucesso",
       });
-
     } catch (error: any) {
       console.error("Erro ao deletar admin:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao deletar admin"
+        message: "Erro ao deletar admin",
       });
     }
   }

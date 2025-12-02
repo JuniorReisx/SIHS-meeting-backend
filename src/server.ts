@@ -7,20 +7,19 @@ import { meetingRouter } from "./routes/meeting.routes";
 import { userRouter } from "./routes/user.routes";
 import { adminRouter } from "./routes/admin.routes";
 
-// Carrega variáveis de ambiente PRIMEIRO
 dotenv.config();
 
 const server = express();
 
-// ========== MIDDLEWARES ==========
-server.use(cors({
-  origin: process.env.CORS_ORIGIN || "*",
-  credentials: true
-}));
+server.use(
+  cors({
+    origin: process.env.CORS_ORIGIN || "*",
+    credentials: true,
+  })
+);
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 
-// ========== ROTAS DE STATUS ==========
 server.get("/", (req: Request, res: Response) => {
   res.json({
     success: true,
@@ -31,54 +30,51 @@ server.get("/", (req: Request, res: Response) => {
       auth: "/api/auth",
       admin: "/api/admin",
       users: "/api/users",
-      meetings: "/api/meetings"
-    }
+      meetings: "/api/meetings",
+    },
   });
 });
 
 server.get("/health", (req: Request, res: Response) => {
-  res.json({ 
+  res.json({
     success: true,
-    status: "ok", 
+    status: "ok",
     message: "Servidor rodando",
     timestamp: new Date().toISOString(),
     environment: process.env.NODE_ENV || "development",
     services: {
       ldap: process.env.LDAP_URL ? "configurado" : "não configurado",
-      supabase: process.env.SUPABASE_URL ? "configurado" : "não configurado"
-    }
+      supabase: process.env.SUPABASE_URL ? "configurado" : "não configurado",
+    },
   });
 });
 
 // ========== ROTAS DA API ==========
 server.use("/api/auth", authRouter);
-server.use("/api/meetings", meetingRouter);  // ✅ Plural
+server.use("/api/meetings", meetingRouter);
 server.use("/api/admin", adminRouter);
-server.use("/api/users", userRouter);        // ✅ Plural
+server.use("/api/users", userRouter);
 
-// ========== MIDDLEWARE DE ROTA NÃO ENCONTRADA ==========
 server.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: "Rota não encontrada",
     path: req.path,
-    method: req.method
+    method: req.method,
   });
 });
 
-// ========== MIDDLEWARE DE TRATAMENTO DE ERROS ==========
 server.use((err: Error, req: Request, res: Response, next: NextFunction) => {
   console.error("❌ Erro não tratado:", err);
-  
+
   res.status(500).json({
     success: false,
     message: "Erro interno do servidor",
     error: process.env.NODE_ENV === "development" ? err.message : undefined,
-    stack: process.env.NODE_ENV === "development" ? err.stack : undefined
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined,
   });
 });
 
-// ========== INICIALIZAÇÃO DO SERVIDOR ==========
 const startServer = async () => {
   try {
     const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
@@ -96,25 +92,32 @@ const startServer = async () => {
       console.log(`   - Users:        http://localhost:${PORT}/api/users`);
       console.log(`   - Meetings:     http://localhost:${PORT}/api/meetings`);
       console.log(`\n🔐 Services:`);
-      console.log(`   - LDAP URL:     ${process.env.LDAP_URL || "❌ não configurado"}`);
-      console.log(`   - LDAP Base DN: ${process.env.LDAP_BASE_DN || "❌ não configurado"}`);
-      console.log(`   - Supabase:     ${process.env.SUPABASE_URL ? "✅ configurado" : "❌ não configurado"}`);
+      console.log(
+        `   - LDAP URL:     ${process.env.LDAP_URL || "❌ não configurado"}`
+      );
+      console.log(
+        `   - LDAP Base DN: ${process.env.LDAP_BASE_DN || "❌ não configurado"}`
+      );
+      console.log(
+        `   - Supabase:     ${
+          process.env.SUPABASE_URL ? "✅ configurado" : "❌ não configurado"
+        }`
+      );
       console.log("\n================================\n");
     });
-
   } catch (error) {
     console.error("❌ Erro ao iniciar o servidor:", error);
     process.exit(1);
   }
 };
 
-process.on('SIGTERM', () => {
-  console.log('\n⚠️  SIGTERM recebido. Encerrando servidor...');
+process.on("SIGTERM", () => {
+  console.log("\n⚠️  SIGTERM recebido. Encerrando servidor...");
   process.exit(0);
 });
 
-process.on('SIGINT', () => {
-  console.log('\n⚠️  SIGINT recebido. Encerrando servidor...');
+process.on("SIGINT", () => {
+  console.log("\n⚠️  SIGINT recebido. Encerrando servidor...");
   process.exit(0);
 });
 

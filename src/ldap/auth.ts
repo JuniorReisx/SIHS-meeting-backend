@@ -1,19 +1,6 @@
 import ldap from "ldapjs";
 import type { Client, SearchOptions } from "ldapjs";
-
-interface LDAPConfig {
-  url: string;
-  baseDN: string;
-  timeout?: number;
-}
-
-interface LDAPUser {
-  dn: string;
-  username: string;
-  email?: string;
-  displayName?: string;
-  groups?: string[];
-}
+import { LDAPConfig, LDAPUser } from "../types/auth.types";
 
 export class LDAPAuthService {
   private config: LDAPConfig;
@@ -22,7 +9,7 @@ export class LDAPAuthService {
     this.config = {
       url: process.env.LDAP_URL || "ldap://localhost:389",
       baseDN: process.env.LDAP_BASE_DN || "dc=empresa,dc=com",
-      timeout: parseInt(process.env.LDAP_TIMEOUT || "5000")
+      timeout: parseInt(process.env.LDAP_TIMEOUT || "5000"),
     };
   }
 
@@ -52,7 +39,6 @@ export class LDAPAuthService {
       const userData = await this.getUserData(client, userDN);
 
       return userData;
-
     } catch (error) {
       throw this.handleError(error);
     } finally {
@@ -67,7 +53,7 @@ export class LDAPAuthService {
     return ldap.createClient({
       url: this.config.url,
       timeout: this.config.timeout,
-      connectTimeout: this.config.timeout
+      connectTimeout: this.config.timeout,
     });
   }
 
@@ -79,7 +65,7 @@ export class LDAPAuthService {
       const searchOptions: SearchOptions = {
         filter: `(|(uid=${username})(sAMAccountName=${username})(cn=${username}))`,
         scope: "sub",
-        attributes: ["dn"]
+        attributes: ["dn"],
       };
 
       client.search(this.config.baseDN, searchOptions, (err, res) => {
@@ -105,7 +91,11 @@ export class LDAPAuthService {
   /**
    * Faz bind (autenticação) com credenciais do usuário
    */
-  private bindUser(client: Client, dn: string, password: string): Promise<void> {
+  private bindUser(
+    client: Client,
+    dn: string,
+    password: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       client.bind(dn, password, (err) => {
         if (err) {
@@ -127,7 +117,14 @@ export class LDAPAuthService {
     return new Promise((resolve, reject) => {
       const searchOptions: SearchOptions = {
         scope: "base",
-        attributes: ["uid", "cn", "mail", "displayName", "memberOf", "sAMAccountName"]
+        attributes: [
+          "uid",
+          "cn",
+          "mail",
+          "displayName",
+          "memberOf",
+          "sAMAccountName",
+        ],
       };
 
       client.search(dn, searchOptions, (err, res) => {

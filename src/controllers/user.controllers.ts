@@ -2,7 +2,6 @@ import type { Request, Response } from "express";
 import { User } from "../models/user.models";
 
 export class UserController {
-  // Criar usuário
   async create(req: Request, res: Response) {
     try {
       const { username, password, department } = req.body;
@@ -10,16 +9,15 @@ export class UserController {
       if (!username || !password || !department) {
         return res.status(400).json({
           success: false,
-          message: "Username, password e department são obrigatórios"
+          message: "Username, password e department são obrigatórios",
         });
       }
 
-      // Verificar se username já existe
       const existingUser = await User.findByUsername(username);
       if (existingUser) {
         return res.status(409).json({
           success: false,
-          message: "Username já está em uso"
+          message: "Username já está em uso",
         });
       }
 
@@ -28,7 +26,7 @@ export class UserController {
       if (!user) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao criar usuário"
+          message: "Erro ao criar usuário",
         });
       }
 
@@ -39,20 +37,18 @@ export class UserController {
           id: user.id,
           username: user.username,
           department: user.department,
-          created_at: user.created_at
-        }
+          created_at: user.created_at,
+        },
       });
-
     } catch (error: any) {
       console.error("Erro ao criar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno ao criar usuário"
+        message: "Erro interno ao criar usuário",
       });
     }
   }
 
-  // Login do usuário
   async login(req: Request, res: Response) {
     try {
       const { username, password } = req.body;
@@ -60,7 +56,7 @@ export class UserController {
       if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Username e password são obrigatórios"
+          message: "Username e password são obrigatórios",
         });
       }
 
@@ -69,26 +65,24 @@ export class UserController {
       if (!user) {
         return res.status(401).json({
           success: false,
-          message: "Credenciais inválidas"
+          message: "Credenciais inválidas",
         });
       }
 
       return res.status(200).json({
         success: true,
         message: "Login realizado com sucesso",
-        data: user
+        data: user,
       });
-
     } catch (error: any) {
       console.error("Erro ao fazer login:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao fazer login"
+        message: "Erro ao fazer login",
       });
     }
   }
 
-  // Buscar todos os usuários
   async findAll(req: Request, res: Response) {
     try {
       const users = await User.findAll();
@@ -97,19 +91,17 @@ export class UserController {
         success: true,
         message: "Usuários recuperados com sucesso",
         data: users,
-        count: users.length
+        count: users.length,
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar usuários:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar usuários"
+        message: "Erro ao buscar usuários",
       });
     }
   }
 
-  // Buscar usuário por ID
   async findById(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -117,7 +109,7 @@ export class UserController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
@@ -126,21 +118,20 @@ export class UserController {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado"
+          message: "Usuário não encontrado",
         });
       }
 
       return res.status(200).json({
         success: true,
         message: "Usuário encontrado",
-        data: user
+        data: user,
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar usuário"
+        message: "Erro ao buscar usuário",
       });
     }
   }
@@ -153,7 +144,7 @@ export class UserController {
       if (!username) {
         return res.status(400).json({
           success: false,
-          message: "Username é obrigatório"
+          message: "Username é obrigatório",
         });
       }
 
@@ -162,26 +153,24 @@ export class UserController {
       if (!user) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado"
+          message: "Usuário não encontrado",
         });
       }
 
       return res.status(200).json({
         success: true,
         message: "Usuário encontrado",
-        data: user
+        data: user,
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar usuário"
+        message: "Erro ao buscar usuário",
       });
     }
   }
 
-  // Buscar usuários por departamento
   async findByDepartment(req: Request, res: Response) {
     try {
       const { department } = req.params;
@@ -189,7 +178,7 @@ export class UserController {
       if (!department) {
         return res.status(400).json({
           success: false,
-          message: "Department é obrigatório"
+          message: "Department é obrigatório",
         });
       }
 
@@ -199,19 +188,17 @@ export class UserController {
         success: true,
         message: "Usuários encontrados",
         data: users,
-        count: users.length
+        count: users.length,
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar usuários por departamento:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar usuários"
+        message: "Erro ao buscar usuários",
       });
     }
   }
 
-  // Atualizar departamento
   async updateDepartment(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -220,14 +207,14 @@ export class UserController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
       if (!department) {
         return res.status(400).json({
           success: false,
-          message: "Department é obrigatório"
+          message: "Department é obrigatório",
         });
       }
 
@@ -235,7 +222,7 @@ export class UserController {
       if (!existingUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado"
+          message: "Usuário não encontrado",
         });
       }
 
@@ -244,26 +231,24 @@ export class UserController {
       if (!updatedUser) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao atualizar departamento"
+          message: "Erro ao atualizar departamento",
         });
       }
 
       return res.status(200).json({
         success: true,
         message: "Departamento atualizado com sucesso",
-        data: updatedUser
+        data: updatedUser,
       });
-
     } catch (error: any) {
       console.error("Erro ao atualizar departamento:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao atualizar departamento"
+        message: "Erro ao atualizar departamento",
       });
     }
   }
 
-  // Atualizar senha
   async updatePassword(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -272,14 +257,14 @@ export class UserController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
       if (!newPassword) {
         return res.status(400).json({
           success: false,
-          message: "Nova senha é obrigatória"
+          message: "Nova senha é obrigatória",
         });
       }
 
@@ -287,7 +272,7 @@ export class UserController {
       if (!existingUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado"
+          message: "Usuário não encontrado",
         });
       }
 
@@ -296,25 +281,23 @@ export class UserController {
       if (!updated) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao atualizar senha"
+          message: "Erro ao atualizar senha",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: "Senha atualizada com sucesso"
+        message: "Senha atualizada com sucesso",
       });
-
     } catch (error: any) {
       console.error("Erro ao atualizar senha:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao atualizar senha"
+        message: "Erro ao atualizar senha",
       });
     }
   }
 
-  // Deletar usuário
   async delete(req: Request, res: Response) {
     try {
       const { id } = req.params;
@@ -322,7 +305,7 @@ export class UserController {
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
           success: false,
-          message: "ID inválido"
+          message: "ID inválido",
         });
       }
 
@@ -330,7 +313,7 @@ export class UserController {
       if (!existingUser) {
         return res.status(404).json({
           success: false,
-          message: "Usuário não encontrado"
+          message: "Usuário não encontrado",
         });
       }
 
@@ -339,20 +322,19 @@ export class UserController {
       if (!deleted) {
         return res.status(500).json({
           success: false,
-          message: "Erro ao deletar usuário"
+          message: "Erro ao deletar usuário",
         });
       }
 
       return res.status(200).json({
         success: true,
-        message: "Usuário deletado com sucesso"
+        message: "Usuário deletado com sucesso",
       });
-
     } catch (error: any) {
       console.error("Erro ao deletar usuário:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro ao deletar usuário"
+        message: "Erro ao deletar usuário",
       });
     }
   }

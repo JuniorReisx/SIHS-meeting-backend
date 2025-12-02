@@ -1,5 +1,5 @@
-import { createClient } from '@supabase/supabase-js';
-import dotenv from 'dotenv';
+import { createClient } from "@supabase/supabase-js";
+import dotenv from "dotenv";
 
 dotenv.config();
 
@@ -7,21 +7,21 @@ const supabaseUrl = process.env.SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
-  throw new Error('SUPABASE_URL e SUPABASE_KEY devem estar definidas no .env');
+  throw new Error("SUPABASE_URL e SUPABASE_KEY devem estar definidas no .env");
 }
 
 export const supabase = createClient(supabaseUrl, supabaseKey, {
   auth: {
     autoRefreshToken: true,
     persistSession: false,
-    detectSessionInUrl: false
+    detectSessionInUrl: false,
   },
   db: {
-    schema: 'public'
+    schema: "public",
   },
   global: {
     headers: {
-      'x-application-name': 'backendsystem'
-    }
-  }
+      "x-application-name": "backendsystem",
+    },
+  },
 });

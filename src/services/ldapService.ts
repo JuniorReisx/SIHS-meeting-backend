@@ -12,7 +12,8 @@ export class LDAPService {
       timeout: parseInt(process.env.LDAP_TIMEOUT || "5000"),
       // Credenciais admin para buscar usuários
       adminDN: process.env.LDAP_ADMIN_DN || this.buildAdminDN(),
-      adminPassword: process.env.LDAP_PASSWORD || process.env.LDAP_ADMIN_PASSWORD
+      adminPassword:
+        process.env.LDAP_PASSWORD || process.env.LDAP_ADMIN_PASSWORD,
     };
   }
 
@@ -22,9 +23,9 @@ export class LDAPService {
   private buildAdminDN(): string | undefined {
     const login = process.env.LDAP_LOGIN;
     const baseDN = process.env.LDAP_BASE_DN;
-    
+
     if (!login || !baseDN) return undefined;
-    
+
     // Tenta diferentes formatos comuns
     // AD geralmente usa: cn=usuario,cn=Users,dc=...
     // OpenLDAP geralmente usa: uid=usuario,ou=People,dc=...
@@ -69,7 +70,6 @@ export class LDAPService {
       } finally {
         this.closeClient(userClient);
       }
-
     } catch (error) {
       throw this.handleError(error);
     } finally {
@@ -136,7 +136,7 @@ export class LDAPService {
           filter: "(objectClass=*)",
           scope: "base",
           attributes: ["dn"],
-          sizeLimit: 1
+          sizeLimit: 1,
         };
 
         const timeout = setTimeout(() => {
@@ -182,7 +182,7 @@ export class LDAPService {
     return ldap.createClient({
       url: this.config.url,
       timeout: this.config.timeout,
-      connectTimeout: this.config.timeout
+      connectTimeout: this.config.timeout,
     });
   }
 
@@ -198,7 +198,9 @@ export class LDAPService {
       client.bind(this.config.adminDN, this.config.adminPassword, (err) => {
         if (err) {
           console.error("Erro ao fazer bind com admin:", err);
-          return reject(new Error("Falha ao conectar com credenciais administrativas"));
+          return reject(
+            new Error("Falha ao conectar com credenciais administrativas")
+          );
         }
         resolve();
       });
@@ -214,7 +216,7 @@ export class LDAPService {
       const searchOptions: SearchOptions = {
         filter: `(|(uid=${username})(sAMAccountName=${username})(cn=${username})(userPrincipalName=${username}))`,
         scope: "sub",
-        attributes: ["dn"]
+        attributes: ["dn"],
       };
 
       client.search(this.config.baseDN, searchOptions, (err, res) => {
@@ -236,7 +238,11 @@ export class LDAPService {
   /**
    * Faz bind (autenticação) com credenciais do usuário
    */
-  private bindUser(client: Client, dn: string, password: string): Promise<void> {
+  private bindUser(
+    client: Client,
+    dn: string,
+    password: string
+  ): Promise<void> {
     return new Promise((resolve, reject) => {
       client.bind(dn, password, (err) => {
         if (err) {
@@ -259,7 +265,15 @@ export class LDAPService {
     return new Promise((resolve, reject) => {
       const searchOptions: SearchOptions = {
         scope: "base",
-        attributes: ["uid", "cn", "mail", "displayName", "memberOf", "sAMAccountName", "userPrincipalName"]
+        attributes: [
+          "uid",
+          "cn",
+          "mail",
+          "displayName",
+          "memberOf",
+          "sAMAccountName",
+          "userPrincipalName",
+        ],
       };
 
       client.search(dn, searchOptions, (err, res) => {
@@ -313,8 +327,16 @@ export class LDAPService {
       const searchOptions: SearchOptions = {
         filter: `(|(uid=*${query}*)(cn=*${query}*)(mail=*${query}*)(displayName=*${query}*)(sAMAccountName=*${query}*)(userPrincipalName=*${query}*))`,
         scope: "sub",
-        attributes: ["uid", "cn", "mail", "displayName", "memberOf", "sAMAccountName", "userPrincipalName"],
-        sizeLimit: 50 // Limita resultados
+        attributes: [
+          "uid",
+          "cn",
+          "mail",
+          "displayName",
+          "memberOf",
+          "sAMAccountName",
+          "userPrincipalName",
+        ],
+        sizeLimit: 50, // Limita resultados
       };
 
       client.search(this.config.baseDN, searchOptions, (err, res) => {
@@ -325,7 +347,7 @@ export class LDAPService {
         res.on("searchEntry", (entry) => {
           const attrs = entry.attributes;
           const user: Partial<LDAPUser> = {
-            dn: entry.objectName || undefined
+            dn: entry.objectName || undefined,
           };
 
           attrs.forEach((attr) => {
@@ -392,7 +414,9 @@ export class LDAPService {
     }
 
     if (error.message.includes("administrativas")) {
-      return new Error("Erro de configuração: credenciais administrativas inválidas");
+      return new Error(
+        "Erro de configuração: credenciais administrativas inválidas"
+      );
     }
 
     return new Error(`Erro na autenticação LDAP: ${error.message}`);

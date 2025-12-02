@@ -10,14 +10,14 @@ class AuthController {
       if (!username || !password) {
         return res.status(400).json({
           success: false,
-          message: "Usuário e senha são obrigatórios"
+          message: "Usuário e senha são obrigatórios",
         });
       }
 
-      if (typeof username !== 'string' || typeof password !== 'string') {
+      if (typeof username !== "string" || typeof password !== "string") {
         return res.status(400).json({
           success: false,
-          message: "Formato inválido de usuário ou senha"
+          message: "Formato inválido de usuário ou senha",
         });
       }
 
@@ -27,7 +27,7 @@ class AuthController {
       if (cleanUsername.length === 0 || cleanPassword.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Usuário e senha não podem estar vazios"
+          message: "Usuário e senha não podem estar vazios",
         });
       }
 
@@ -40,33 +40,36 @@ class AuthController {
           username: user.username,
           ...(user.email && { email: user.email }),
           ...(user.displayName && { displayName: user.displayName }),
-          ...(user.groups && { groups: user.groups })
-        }
+          ...(user.groups && { groups: user.groups }),
+        },
       });
-
     } catch (error: any) {
       console.error("Erro no login:", error);
 
-      if (error.message.includes("inválidos") || 
-          error.message.includes("não encontrado") ||
-          error.message.includes("credenciais")) {
+      if (
+        error.message.includes("inválidos") ||
+        error.message.includes("não encontrado") ||
+        error.message.includes("credenciais")
+      ) {
         return res.status(401).json({
           success: false,
-          message: "Credenciais inválidas"
+          message: "Credenciais inválidas",
         });
       }
 
-      if (error.message.includes("timeout") || 
-          error.message.includes("conexão")) {
+      if (
+        error.message.includes("timeout") ||
+        error.message.includes("conexão")
+      ) {
         return res.status(503).json({
           success: false,
-          message: "Serviço de autenticação temporariamente indisponível"
+          message: "Serviço de autenticação temporariamente indisponível",
         });
       }
 
       return res.status(500).json({
         success: false,
-        message: "Erro interno no servidor de autenticação"
+        message: "Erro interno no servidor de autenticação",
       });
     }
   }
@@ -78,14 +81,14 @@ class AuthController {
       if (!username) {
         return res.status(400).json({
           success: false,
-          message: "Usuário é obrigatório"
+          message: "Usuário é obrigatório",
         });
       }
 
-      if (typeof username !== 'string') {
+      if (typeof username !== "string") {
         return res.status(400).json({
           success: false,
-          message: "Formato inválido de usuário"
+          message: "Formato inválido de usuário",
         });
       }
 
@@ -94,7 +97,7 @@ class AuthController {
       if (cleanUsername.length === 0) {
         return res.status(400).json({
           success: false,
-          message: "Usuário não pode estar vazio"
+          message: "Usuário não pode estar vazio",
         });
       }
 
@@ -103,23 +106,24 @@ class AuthController {
       return res.status(200).json({
         success: true,
         exists,
-        message: exists ? "Usuário encontrado" : "Usuário não encontrado"
+        message: exists ? "Usuário encontrado" : "Usuário não encontrado",
       });
-
     } catch (error: any) {
       console.error("Erro ao verificar usuário:", error);
 
-      if (error.message.includes("timeout") || 
-          error.message.includes("conexão")) {
+      if (
+        error.message.includes("timeout") ||
+        error.message.includes("conexão")
+      ) {
         return res.status(503).json({
           success: false,
-          message: "Serviço de autenticação temporariamente indisponível"
+          message: "Serviço de autenticação temporariamente indisponível",
         });
       }
 
       return res.status(500).json({
         success: false,
-        message: "Erro ao verificar usuário"
+        message: "Erro ao verificar usuário",
       });
     }
   }
@@ -128,10 +132,10 @@ class AuthController {
     try {
       const { query } = req.query;
 
-      if (!query || typeof query !== 'string') {
+      if (!query || typeof query !== "string") {
         return res.status(400).json({
           success: false,
-          message: "Query de busca é obrigatória"
+          message: "Query de busca é obrigatória",
         });
       }
 
@@ -140,7 +144,7 @@ class AuthController {
       if (cleanQuery.length < 3) {
         return res.status(400).json({
           success: false,
-          message: "Query deve ter no mínimo 3 caracteres"
+          message: "Query deve ter no mínimo 3 caracteres",
         });
       }
 
@@ -150,23 +154,27 @@ class AuthController {
         success: true,
         users,
         count: users.length,
-        message: users.length > 0 ? `${users.length} usuário(s) encontrado(s)` : "Nenhum usuário encontrado"
+        message:
+          users.length > 0
+            ? `${users.length} usuário(s) encontrado(s)`
+            : "Nenhum usuário encontrado",
       });
-
     } catch (error: any) {
       console.error("Erro ao buscar usuários:", error);
 
-      if (error.message.includes("timeout") || 
-          error.message.includes("conexão")) {
+      if (
+        error.message.includes("timeout") ||
+        error.message.includes("conexão")
+      ) {
         return res.status(503).json({
           success: false,
-          message: "Serviço de autenticação temporariamente indisponível"
+          message: "Serviço de autenticação temporariamente indisponível",
         });
       }
 
       return res.status(500).json({
         success: false,
-        message: "Erro ao buscar usuários"
+        message: "Erro ao buscar usuários",
       });
     }
   }
@@ -175,15 +183,14 @@ class AuthController {
     try {
       return res.status(200).json({
         success: true,
-        message: "Logout realizado com sucesso"
+        message: "Logout realizado com sucesso",
       });
-
     } catch (error: any) {
       console.error("Erro no logout:", error);
 
       return res.status(500).json({
         success: false,
-        message: "Erro ao realizar logout"
+        message: "Erro ao realizar logout",
       });
     }
   }
@@ -195,12 +202,11 @@ class AuthController {
       return res.status(isHealthy ? 200 : 503).json({
         success: isHealthy,
         status: isHealthy ? "ok" : "error",
-        message: isHealthy 
-          ? "Serviço LDAP está funcionando" 
+        message: isHealthy
+          ? "Serviço LDAP está funcionando"
           : "Serviço LDAP indisponível",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
-
     } catch (error: any) {
       console.error("Erro ao verificar status LDAP:", error);
 
@@ -208,7 +214,7 @@ class AuthController {
         success: false,
         status: "error",
         message: "Não foi possível verificar o status do serviço LDAP",
-        timestamp: new Date().toISOString()
+        timestamp: new Date().toISOString(),
       });
     }
   }
