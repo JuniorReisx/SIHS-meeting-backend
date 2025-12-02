@@ -1,79 +1,105 @@
 import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
-import type { Request, Response } from "express";
-import  { authRouter }  from "./routes/auth.routes";
-import  { meetingRouter } from "./routes/meeting.routes";
-import  { userRouter }  from "./routes/user.routes";
-import  { adminRouter }  from "./routes/admin.routes";
+import type { Request, Response, NextFunction } from "express";
+import { authRouter } from "./routes/auth.routes";
+import { meetingRouter } from "./routes/meeting.routes";
+import { userRouter } from "./routes/user.routes";
+import { adminRouter } from "./routes/admin.routes";
 
+// Carrega variáveis de ambiente PRIMEIRO
 dotenv.config();
 
 const server = express();
 
-server.use(cors());
+// ========== MIDDLEWARES ==========
+server.use(cors({
+  origin: process.env.CORS_ORIGIN || "*",
+  credentials: true
+}));
 server.use(express.json());
 server.use(express.urlencoded({ extended: true }));
 
+// ========== ROTAS DE STATUS ==========
 server.get("/", (req: Request, res: Response) => {
-  res.send("Servidor funcionando!");
+  res.json({
+    success: true,
+    message: "SIHS Meeting Backend API",
+    version: "1.0.0",
+    endpoints: {
+      health: "/health",
+      auth: "/api/auth",
+      admin: "/api/admin",
+      users: "/api/users",
+      meetings: "/api/meetings"
+    }
+  });
 });
 
 server.get("/health", (req: Request, res: Response) => {
   res.json({ 
+    success: true,
     status: "ok", 
     message: "Servidor rodando",
-    ldap: process.env.LDAP_URL ? "configurado" : "não configurado",
-    supabase: process.env.SUPABASE_URL ? "configurado" : "não configurado"
+    timestamp: new Date().toISOString(),
+    environment: process.env.NODE_ENV || "development",
+    services: {
+      ldap: process.env.LDAP_URL ? "configurado" : "não configurado",
+      supabase: process.env.SUPABASE_URL ? "configurado" : "não configurado"
+    }
   });
 });
 
-server.use("/auth", authRouter);
-server.use("/meeting", meetingRouter);
-server.use("/admin", adminRouter);
-server.use("/user", userRouter);
+// ========== ROTAS DA API ==========
+server.use("/api/auth", authRouter);
+server.use("/api/meetings", meetingRouter);  // ✅ Plural
+server.use("/api/admin", adminRouter);
+server.use("/api/users", userRouter);        // ✅ Plural
 
+// ========== MIDDLEWARE DE ROTA NÃO ENCONTRADA ==========
 server.use((req: Request, res: Response) => {
   res.status(404).json({
     success: false,
     message: "Rota não encontrada",
-    path: req.path
+    path: req.path,
+    method: req.method
   });
 });
 
-server.use((err: Error, req: Request, res: Response, next: any) => {
-  console.error("Erro não tratado:", err);
+// ========== MIDDLEWARE DE TRATAMENTO DE ERROS ==========
+server.use((err: Error, req: Request, res: Response, next: NextFunction) => {
+  console.error("❌ Erro não tratado:", err);
   
   res.status(500).json({
     success: false,
     message: "Erro interno do servidor",
-    error: process.env.NODE_ENV === "development" ? err.message : undefined
+    error: process.env.NODE_ENV === "development" ? err.message : undefined,
+    stack: process.env.NODE_ENV === "development" ? err.stack : undefined
   });
 });
 
+// ========== INICIALIZAÇÃO DO SERVIDOR ==========
 const startServer = async () => {
   try {
     const PORT = process.env.PORT ? Number(process.env.PORT) : 3000;
 
     server.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
+      console.log("\n🚀 ================================");
+      console.log("   SIHS Meeting Backend API");
+      console.log("================================");
+      console.log(`\n📍 Server: http://localhost:${PORT}`);
       console.log(`📍 Environment: ${process.env.NODE_ENV || "development"}`);
-      console.log(`🔐 LDAP URL: ${process.env.LDAP_URL || "não configurado"}`);
-      console.log(`📁 Base DN: ${process.env.LDAP_BASE_DN || "não configurado"}`);
-      console.log(`💾 Supabase: ${process.env.SUPABASE_URL ? "configurado" : "não configurado"}`);
-      console.log("\n📋 Rotas disponíveis:");
-      console.log("   GET    /");
-      console.log("   GET    /health");
-      console.log("   POST   /api/auth/login");
-      console.log("   POST   /api/auth/verify");
-      console.log("   POST   /api/auth/logout");
-      console.log("   POST   /api/meetings");
-      console.log("   GET    /api/meetings");
-      console.log("   GET    /api/meetings/:id");
-      console.log("   PUT    /api/meetings/:id");
-      console.log("   DELETE /api/meetings/:id");
-      console.log("   GET    /api/meetings/date/:date");
-      console.log("   GET    /api/meetings/participant/:name");
+      console.log(`\n🔌 Endpoints:`);
+      console.log(`   - Health Check: http://localhost:${PORT}/health`);
+      console.log(`   - Auth:         http://localhost:${PORT}/api/auth`);
+      console.log(`   - Admin:        http://localhost:${PORT}/api/admin`);
+      console.log(`   - Users:        http://localhost:${PORT}/api/users`);
+      console.log(`   - Meetings:     http://localhost:${PORT}/api/meetings`);
+      console.log(`\n🔐 Services:`);
+      console.log(`   - LDAP URL:     ${process.env.LDAP_URL || "❌ não configurado"}`);
+      console.log(`   - LDAP Base DN: ${process.env.LDAP_BASE_DN || "❌ não configurado"}`);
+      console.log(`   - Supabase:     ${process.env.SUPABASE_URL ? "✅ configurado" : "❌ não configurado"}`);
+      console.log("\n================================\n");
     });
 
   } catch (error) {
@@ -82,4 +108,16 @@ const startServer = async () => {
   }
 };
 
+process.on('SIGTERM', () => {
+  console.log('\n⚠️  SIGTERM recebido. Encerrando servidor...');
+  process.exit(0);
+});
+
+process.on('SIGINT', () => {
+  console.log('\n⚠️  SIGINT recebido. Encerrando servidor...');
+  process.exit(0);
+});
+
 startServer();
+
+export default server;
