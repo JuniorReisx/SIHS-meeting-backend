@@ -1,25 +1,61 @@
 import type { Request, Response } from "express";
 import { Meeting } from "../models/meeting.models";
-import type { MeetingTypes } from "../types/auth.types";
+import type { UpdateMeetingInput } from "../types/auth.types";
 
 export class MeetingController {
   async create(req: Request, res: Response) {
     try {
-      const { title, date, time, location, participants, description } = req.body;
+      const { 
+        title, 
+        meeting_date, 
+        start_time, 
+        end_time, 
+        location, 
+        participants_count, 
+        description 
+      } = req.body;
 
-      if (!title || !date || !time || !location || !participants || !description) {
+      // Validação dos campos obrigatórios
+      if (!title || !meeting_date || !start_time || !end_time || !location || participants_count === undefined) {
         return res.status(400).json({
           success: false,
-          message: "Todos os campos são obrigatórios"
+          message: "Campos obrigatórios: title, meeting_date, start_time, end_time, location, participants_count"
+        });
+      }
+
+      // Validação de formato de data (YYYY-MM-DD)
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(meeting_date)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de data inválido. Use YYYY-MM-DD"
+        });
+      }
+
+      // Validação de formato de hora (HH:MM ou HH:MM:SS)
+      const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/;
+      if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de hora inválido. Use HH:MM ou HH:MM:SS"
+        });
+      }
+
+      // Validação de número de participantes
+      if (typeof participants_count !== 'number' || participants_count < 0) {
+        return res.status(400).json({
+          success: false,
+          message: "participants_count deve ser um número maior ou igual a 0"
         });
       }
 
       const meeting = await Meeting.create({
         title,
-        date,
-        time,
+        meeting_date,
+        start_time: start_time.length === 5 ? `${start_time}:00` : start_time,
+        end_time: end_time.length === 5 ? `${end_time}:00` : end_time,
         location,
-        participants,
+        participants_count,
         description
       });
 
@@ -40,7 +76,8 @@ export class MeetingController {
       console.error("Erro ao criar reunião:", error);
       return res.status(500).json({
         success: false,
-        message: "Erro interno ao criar reunião"
+        message: "Erro interno ao criar reunião",
+        error: error.message
       });
     }
   }
@@ -103,7 +140,15 @@ export class MeetingController {
   async update(req: Request, res: Response) {
     try {
       const { id } = req.params;
-      const { title, date, time, location, participants, description } = req.body;
+      const { 
+        title, 
+        meeting_date, 
+        start_time, 
+        end_time, 
+        location, 
+        participants_count, 
+        description 
+      } = req.body;
 
       if (!id || isNaN(Number(id))) {
         return res.status(400).json({
@@ -120,13 +165,53 @@ export class MeetingController {
         });
       }
 
-      const updateData: Partial<MeetingTypes> = {};
-      if (title) updateData.title = title;
-      if (date) updateData.date = date;
-      if (time) updateData.time = time;
-      if (location) updateData.location = location;
-      if (participants) updateData.participants = participants;
-      if (description) updateData.description = description;
+      const updateData: UpdateMeetingInput = {};
+      
+      if (title !== undefined) updateData.title = title;
+      if (meeting_date !== undefined) {
+        // Validação de formato de data
+        const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+        if (!dateRegex.test(meeting_date)) {
+          return res.status(400).json({
+            success: false,
+            message: "Formato de data inválido. Use YYYY-MM-DD"
+          });
+        }
+        updateData.meeting_date = meeting_date;
+      }
+      if (start_time !== undefined) {
+        // Validação de formato de hora
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/;
+        if (!timeRegex.test(start_time)) {
+          return res.status(400).json({
+            success: false,
+            message: "Formato de start_time inválido. Use HH:MM ou HH:MM:SS"
+          });
+        }
+        updateData.start_time = start_time.length === 5 ? `${start_time}:00` : start_time;
+      }
+      if (end_time !== undefined) {
+        // Validação de formato de hora
+        const timeRegex = /^([01]\d|2[0-3]):([0-5]\d)(:[0-5]\d)?$/;
+        if (!timeRegex.test(end_time)) {
+          return res.status(400).json({
+            success: false,
+            message: "Formato de end_time inválido. Use HH:MM ou HH:MM:SS"
+          });
+        }
+        updateData.end_time = end_time.length === 5 ? `${end_time}:00` : end_time;
+      }
+      if (location !== undefined) updateData.location = location;
+      if (participants_count !== undefined) {
+        if (typeof participants_count !== 'number' || participants_count < 0) {
+          return res.status(400).json({
+            success: false,
+            message: "participants_count deve ser um número maior ou igual a 0"
+          });
+        }
+        updateData.participants_count = participants_count;
+      }
+      if (description !== undefined) updateData.description = description;
 
       const updatedMeeting = await Meeting.update(Number(id), updateData);
 
@@ -205,6 +290,15 @@ export class MeetingController {
         });
       }
 
+      // Validação de formato de data
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(date)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de data inválido. Use YYYY-MM-DD"
+        });
+      }
+
       const meetings = await Meeting.findByDate(date);
 
       return res.status(200).json({
@@ -223,18 +317,18 @@ export class MeetingController {
     }
   }
 
-  async findByParticipant(req: Request, res: Response) {
+  async findByLocation(req: Request, res: Response) {
     try {
-      const { name } = req.params;
+      const { location } = req.params;
 
-      if (!name) {
+      if (!location) {
         return res.status(400).json({
           success: false,
-          message: "Nome do participante é obrigatório"
+          message: "Local é obrigatório"
         });
       }
 
-      const meetings = await Meeting.findByParticipant(name);
+      const meetings = await Meeting.findByLocation(location);
 
       return res.status(200).json({
         success: true,
@@ -244,7 +338,85 @@ export class MeetingController {
       });
 
     } catch (error: any) {
-      console.error("Erro ao buscar reuniões por participante:", error);
+      console.error("Erro ao buscar reuniões por local:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erro ao buscar reuniões"
+      });
+    }
+  }
+
+  async findUpcoming(req: Request, res: Response) {
+    try {
+      const meetings = await Meeting.findUpcoming();
+
+      return res.status(200).json({
+        success: true,
+        message: "Reuniões futuras encontradas",
+        data: meetings,
+        count: meetings.length
+      });
+
+    } catch (error: any) {
+      console.error("Erro ao buscar reuniões futuras:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erro ao buscar reuniões futuras"
+      });
+    }
+  }
+
+  async findPast(req: Request, res: Response) {
+    try {
+      const meetings = await Meeting.findPast();
+
+      return res.status(200).json({
+        success: true,
+        message: "Reuniões passadas encontradas",
+        data: meetings,
+        count: meetings.length
+      });
+
+    } catch (error: any) {
+      console.error("Erro ao buscar reuniões passadas:", error);
+      return res.status(500).json({
+        success: false,
+        message: "Erro ao buscar reuniões passadas"
+      });
+    }
+  }
+
+  async findByDateRange(req: Request, res: Response) {
+    try {
+      const { startDate, endDate } = req.query;
+
+      if (!startDate || !endDate) {
+        return res.status(400).json({
+          success: false,
+          message: "startDate e endDate são obrigatórios"
+        });
+      }
+
+      // Validação de formato de data
+      const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+      if (!dateRegex.test(startDate as string) || !dateRegex.test(endDate as string)) {
+        return res.status(400).json({
+          success: false,
+          message: "Formato de data inválido. Use YYYY-MM-DD"
+        });
+      }
+
+      const meetings = await Meeting.findByDateRange(startDate as string, endDate as string);
+
+      return res.status(200).json({
+        success: true,
+        message: "Reuniões encontradas",
+        data: meetings,
+        count: meetings.length
+      });
+
+    } catch (error: any) {
+      console.error("Erro ao buscar reuniões por intervalo:", error);
       return res.status(500).json({
         success: false,
         message: "Erro ao buscar reuniões"

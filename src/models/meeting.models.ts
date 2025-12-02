@@ -1,13 +1,13 @@
 import { supabase } from '../config/supabase';
-import type { MeetingTypes } from '../types/auth.types';
+import type { MeetingTypes, CreateMeetingInput, UpdateMeetingInput } from '../types/auth.types';
 
 export class Meeting {
   // Criar reunião
-  static async create(data: Omit<MeetingTypes, 'id'>): Promise<MeetingTypes | null> {
+  static async create(data: CreateMeetingInput): Promise<MeetingTypes | null> {
     try {
       const { data: meeting, error } = await supabase
         .from('meetings')
-        .insert([data])
+        .insert([data]) // ✅ Supabase cria created_at e updated_at automaticamente
         .select()
         .single();
 
@@ -16,7 +16,7 @@ export class Meeting {
         return null;
       }
 
-      return meeting;
+      return meeting as MeetingTypes;
     } catch (error) {
       console.error('Erro ao criar reunião:', error);
       return null;
@@ -29,14 +29,15 @@ export class Meeting {
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
-        .order('date', { ascending: false });
+        .order('meeting_date', { ascending: false })
+        .order('start_time', { ascending: false });
 
       if (error) {
         console.error('Erro ao buscar reuniões:', error);
         return [];
       }
 
-      return data || [];
+      return (data as MeetingTypes[]) || [];
     } catch (error) {
       console.error('Erro ao buscar reuniões:', error);
       return [];
@@ -57,7 +58,7 @@ export class Meeting {
         return null;
       }
 
-      return data;
+      return data as MeetingTypes;
     } catch (error) {
       console.error('Erro ao buscar reunião:', error);
       return null;
@@ -65,11 +66,16 @@ export class Meeting {
   }
 
   // Atualizar reunião
-  static async update(id: number, data: Partial<MeetingTypes>): Promise<MeetingTypes | null> {
+  static async update(id: number, data: UpdateMeetingInput): Promise<MeetingTypes | null> {
     try {
+      const updateData: any = {
+        ...data,
+        updated_at: new Date().toISOString()
+      };
+
       const { data: meeting, error } = await supabase
         .from('meetings')
-        .update(data)
+        .update(updateData)
         .eq('id', id)
         .select()
         .single();
@@ -79,7 +85,7 @@ export class Meeting {
         return null;
       }
 
-      return meeting;
+      return meeting as MeetingTypes;
     } catch (error) {
       console.error('Erro ao atualizar reunião:', error);
       return null;
@@ -112,38 +118,109 @@ export class Meeting {
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
-        .eq('date', date)
-        .order('time', { ascending: true });
+        .eq('meeting_date', date)
+        .order('start_time', { ascending: true });
 
       if (error) {
         console.error('Erro ao buscar reuniões por data:', error);
         return [];
       }
 
-      return data || [];
+      return (data as MeetingTypes[]) || [];
     } catch (error) {
       console.error('Erro ao buscar reuniões por data:', error);
       return [];
     }
   }
 
-  // Buscar reuniões por participante
-  static async findByParticipant(participant: string): Promise<MeetingTypes[]> {
+  // Buscar reuniões por local
+  static async findByLocation(location: string): Promise<MeetingTypes[]> {
     try {
       const { data, error } = await supabase
         .from('meetings')
         .select('*')
-        .ilike('participants', `%${participant}%`)
-        .order('date', { ascending: false });
+        .ilike('location', `%${location}%`)
+        .order('meeting_date', { ascending: false });
 
       if (error) {
-        console.error('Erro ao buscar reuniões por participante:', error);
+        console.error('Erro ao buscar reuniões por local:', error);
         return [];
       }
 
-      return data || [];
+      return (data as MeetingTypes[]) || [];
     } catch (error) {
-      console.error('Erro ao buscar reuniões por participante:', error);
+      console.error('Erro ao buscar reuniões por local:', error);
+      return [];
+    }
+  }
+
+  // Buscar reuniões futuras
+  static async findUpcoming(): Promise<MeetingTypes[]> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .gte('meeting_date', today)
+        .order('meeting_date', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar reuniões futuras:', error);
+        return [];
+      }
+
+      return (data as MeetingTypes[]) || [];
+    } catch (error) {
+      console.error('Erro ao buscar reuniões futuras:', error);
+      return [];
+    }
+  }
+
+  // Buscar reuniões passadas
+  static async findPast(): Promise<MeetingTypes[]> {
+    try {
+      const today = new Date().toISOString().split('T')[0];
+      
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .lt('meeting_date', today)
+        .order('meeting_date', { ascending: false })
+        .order('start_time', { ascending: false });
+
+      if (error) {
+        console.error('Erro ao buscar reuniões passadas:', error);
+        return [];
+      }
+
+      return (data as MeetingTypes[]) || [];
+    } catch (error) {
+      console.error('Erro ao buscar reuniões passadas:', error);
+      return [];
+    }
+  }
+
+  // Buscar reuniões por intervalo de datas
+  static async findByDateRange(startDate: string, endDate: string): Promise<MeetingTypes[]> {
+    try {
+      const { data, error } = await supabase
+        .from('meetings')
+        .select('*')
+        .gte('meeting_date', startDate)
+        .lte('meeting_date', endDate)
+        .order('meeting_date', { ascending: true })
+        .order('start_time', { ascending: true });
+
+      if (error) {
+        console.error('Erro ao buscar reuniões por intervalo:', error);
+        return [];
+      }
+
+      return (data as MeetingTypes[]) || [];
+    } catch (error) {
+      console.error('Erro ao buscar reuniões por intervalo:', error);
       return [];
     }
   }

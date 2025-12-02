@@ -73,17 +73,108 @@ export interface AdminResponse {
   updated_at: string;
 }
 
+
+
+// src/types/auth.types.ts
+
+// ========== ADMIN TYPES ==========
+export interface AdminTypes {
+  id: number;
+  username: string;
+  password: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminResponse {
+  id: number;
+  username: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ========== MEETING TYPES ==========
 export interface MeetingTypes {
-  id?: number;
+  id: number;
   title: string;
-  date: string;
-  time: string;
-  location?: string;
-  participants?: string[];
+  meeting_date: string; // formato: YYYY-MM-DD
+  start_time: string; // formato: HH:MM:SS
+  end_time: string; // formato: HH:MM:SS
+  location: string;
+  participants_count: number;
+  description: string | null;
+  created_at: string; // ISO timestamp
+  updated_at: string; // ISO timestamp
+}
+
+export interface CreateMeetingInput {
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
   description?: string;
-  organizer?: string;
-  status?: string;
-  duration?: number;
-  created_at?: string;
-  updated_at?: string;
+}
+
+export interface UpdateMeetingInput {
+  title?: string;
+  meeting_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  participants_count?: number;
+  description?: string;
+}
+
+// src/types/auth.types.ts
+
+// ========== ADMIN TYPES ==========
+export interface AdminTypes {
+  id: number;
+  username: string;
+  password: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AdminResponse {
+  id: number;
+  username: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// ========== MEETING TYPES ==========
+export interface MeetingTypes {
+  id: number;
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface CreateMeetingInput {
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
+  description?: string;
+}
+
+export interface UpdateMeetingInput {
+  title?: string;
+  meeting_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  participants_count?: number;
+  description?: string;
 }
