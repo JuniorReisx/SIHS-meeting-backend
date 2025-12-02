@@ -28,8 +28,8 @@ server.get("/health", (req: Request, res: Response) => {
   });
 });
 
-server.use("/api/auth", authRouter);
-server.use("/api/meetings", meetingRouter);
+server.use("/auth", authRouter);
+server.use("/meeting", meetingRouter);
 server.use("/admin", adminRouter);
 server.use("/user", userRouter);
 
