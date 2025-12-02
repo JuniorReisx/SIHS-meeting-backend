@@ -51,19 +51,6 @@ export interface UpdateMeetingInput {
 }
 
 // ========== LDAP TYPES ==========
-export interface LDAPConfig {
-  url: string;
-  baseDN: string;
-  timeout?: number;
-}
-
-export interface LDAPUser {
-  dn: string;
-  username: string;
-  email?: string;
-  displayName?: string;
-  groups?: string[];
-}
 
 // ========== LOGIN/AUTH TYPES ==========
 export interface UserLoginCredentials {
@@ -85,6 +72,40 @@ export interface AdminLoginCredentials {
 export interface AdminCredentials {
   user: string;
   password: string;
+}
+
+export interface LoginRequest {
+  username: string;
+  password: string;
+}
+
+export interface AuthResponse {
+  success: boolean;
+  message?: string;
+  user?: {
+    username: string;
+    email?: string;
+    displayName?: string;
+    groups?: string[];
+  };
+}
+
+// src/types/auth.types.ts
+
+export interface LDAPConfig {
+  url: string;
+  baseDN: string;
+  timeout: number;
+  adminDN?: string;
+  adminPassword?: string;
+}
+
+export interface LDAPUser {
+  username: string;
+  email?: string;
+  displayName?: string;
+  groups?: string[];
+  dn?: string;
 }
 
 export interface LoginRequest {
