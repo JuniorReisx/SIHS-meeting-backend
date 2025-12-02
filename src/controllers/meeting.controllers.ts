@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { Meeting } from "../models/meeting.models.js";
-import type { MeetingTypes } from "../types/auth.types.js";
+import { Meeting } from "../models/meeting.models";
+import type { MeetingTypes } from "../types/auth.types";
 
 export class MeetingController {
   async create(req: Request, res: Response) {

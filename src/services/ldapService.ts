@@ -1,6 +1,6 @@
 import ldap from "ldapjs";
 import type { Client, SearchOptions } from "ldapjs";
-import type { LDAPConfig, LDAPUser } from "../types/auth.types.js";
+import type { LDAPConfig, LDAPUser } from "../types/auth.types";
 
 export class LDAPService {
   private config: LDAPConfig;

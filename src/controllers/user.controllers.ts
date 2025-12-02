@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { User } from "../models/user.models.js";
+import { User } from "../models/user.models";
 
 export class UserController {
   // Criar usuário

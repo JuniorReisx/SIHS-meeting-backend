@@ -1,5 +1,5 @@
-import { supabase } from '../config/supabase.js';
-import type { MeetingTypes } from '../types/auth.types.js';
+import { supabase } from '../config/supabase';
+import type { MeetingTypes } from '../types/auth.types';
 
 export class Meeting {
   // Criar reunião

@@ -2,10 +2,10 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import type { Request, Response } from "express";
-import  { authRouter }  from "./routes/auth.routes.js";
-import  { meetingRouter } from "./routes/meeting.routes.js";
-import  { userRouter }  from "./routes/user.routes.js";
-import  { adminRouter }  from "./routes/admin.routes.js";
+import  { authRouter }  from "./routes/auth.routes";
+import  { meetingRouter } from "./routes/meeting.routes";
+import  { userRouter }  from "./routes/user.routes";
+import  { adminRouter }  from "./routes/admin.routes";
 
 dotenv.config();
 

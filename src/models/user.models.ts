@@ -1,4 +1,4 @@
-import { supabase } from '../config/supabase.js';
+import { supabase } from '../config/supabase';
 import crypto from 'crypto';
 
 export interface UserTypes {

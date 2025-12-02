@@ -1,16 +1,21 @@
-import { supabase } from '../config/supabase.js';
-import crypto from 'crypto';
-import { AdminTypes } from '../types/auth.types.js';
-import { AdminResponse } from '../types/auth.types.js';
+import { supabase } from '../config/supabase';
+import bcrypt from 'bcrypt';
+import { AdminTypes } from '../types/auth.types';
+import { AdminResponse } from '../types/auth.types';
 
 export class Admin {
-  private static hashPassword(password: string): string {
-    return crypto.createHash('sha256').update(password).digest('hex');
+  private static async hashPassword(password: string): Promise<string> {
+    const saltRounds = 10;
+    return await bcrypt.hash(password, saltRounds);
+  }
+
+  private static async comparePassword(password: string, hash: string): Promise<boolean> {
+    return await bcrypt.compare(password, hash);
   }
 
   static async create(username: string, password: string): Promise<AdminTypes | null> {
     try {
-      const hashedPassword = this.hashPassword(password);
+      const hashedPassword = await this.hashPassword(password);
 
       const { data: admin, error } = await supabase
         .from('admins')
@@ -32,16 +37,22 @@ export class Admin {
 
   static async login(username: string, password: string): Promise<Omit<AdminTypes, 'password'> | null> {
     try {
-      const hashedPassword = this.hashPassword(password);
-
+      // Primeiro busca o usuário
       const { data: admin, error } = await supabase
         .from('admins')
         .select('*')
         .eq('username', username)
-        .eq('password', hashedPassword)
         .single();
 
       if (error || !admin) {
+        console.error('Credenciais inválidas');
+        return null;
+      }
+
+      // Depois compara a senha
+      const isPasswordValid = await this.comparePassword(password, admin.password);
+      
+      if (!isPasswordValid) {
         console.error('Credenciais inválidas');
         return null;
       }
@@ -58,7 +69,7 @@ export class Admin {
     try {
       const { data, error } = await supabase
         .from('admins')
-        .select('id, username, created_at, updated_at')
+        .select('id, username, createdAt, updatedAt')
         .eq('id', id)
         .single();
 
@@ -76,11 +87,14 @@ export class Admin {
 
   static async updatePassword(id: number, newPassword: string): Promise<boolean> {
     try {
-      const hashedPassword = this.hashPassword(newPassword);
+      const hashedPassword = await this.hashPassword(newPassword);
 
       const { error } = await supabase
         .from('admins')
-        .update({ password: hashedPassword, updated_at: new Date().toISOString() })
+        .update({ 
+          password: hashedPassword, 
+          updatedAt: new Date().toISOString()
+        })
         .eq('id', id);
 
       if (error) {
@@ -118,8 +132,8 @@ export class Admin {
     try {
       const { data, error } = await supabase
         .from('admins')
-        .select('id, username, created_at, updated_at')
-        .order('created_at', { ascending: false });
+        .select('id, username, createdAt, updatedAt')
+        .order('createdAt', { ascending: false }); // ✅ Usando createdAt com C maiúsculo
 
       if (error) {
         console.error('Erro ao buscar admins:', error);

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { Admin } from "../models/admin.models.js";
+import { Admin } from "../models/admin.models";
 
 export class AdminController {
   // Criar admin
@@ -29,7 +29,7 @@ export class AdminController {
         data: {
           id: admin.id,
           username: admin.username,
-          created_at: admin.created_at
+          createdAt: admin.createdAt // ✅ Mudado de created_at para createdAt
         }
       });
 

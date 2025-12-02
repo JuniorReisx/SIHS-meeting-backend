@@ -3,11 +3,25 @@ import dotenv from 'dotenv';
 
 dotenv.config();
 
-const supabaseUrl = process.env.SUPABASE_URL || '';
-const supabaseKey = process.env.SUPABASE_KEY || '';
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_KEY;
 
 if (!supabaseUrl || !supabaseKey) {
   throw new Error('SUPABASE_URL e SUPABASE_KEY devem estar definidas no .env');
 }
 
-export const supabase = createClient(supabaseUrl, supabaseKey);
+export const supabase = createClient(supabaseUrl, supabaseKey, {
+  auth: {
+    autoRefreshToken: true,
+    persistSession: false,
+    detectSessionInUrl: false
+  },
+  db: {
+    schema: 'public'
+  },
+  global: {
+    headers: {
+      'x-application-name': 'backendsystem'
+    }
+  }
+});

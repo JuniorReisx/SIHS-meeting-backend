@@ -1,6 +1,6 @@
 import type { Request, Response } from "express";
-import { ldapService } from "../services/ldapService.js";
-import type { LoginRequest, AuthResponse } from "../types/auth.types.js";
+import { ldapService } from "../services/ldapService";
+import type { LoginRequest, AuthResponse } from "../types/auth.types";
 
 class AuthController {
   /**

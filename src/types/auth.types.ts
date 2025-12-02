@@ -1,4 +1,18 @@
+// src/types/auth.types.ts
+export interface AdminTypes {
+  id: number;
+  username: string;
+  password: string;
+  createdAt: string; // ✅ camelCase
+  updatedAt: string; // ✅ camelCase
+}
 
+export interface AdminResponse {
+  id: number;
+  username: string;
+  createdAt: string; // ✅ camelCase
+  updatedAt: string; // ✅ camelCase
+}
 
 export interface UserLoginCredentials {
   user: string;
@@ -51,13 +65,6 @@ export interface AuthResponse {
   };
 }
 
-export interface AdminTypes {
-  id: number;
-  username: string;
-  password?: string;
-  created_at?: string;
-  updated_at?: string;
-}
 
 export interface AdminResponse {
   id: number;
