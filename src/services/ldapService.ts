@@ -1,165 +1,252 @@
-import ldap, { Client, SearchOptions } from 'ldapjs';
-import { ldapConfig } from '../config/ldap.config.js';
+import ldap from 'ldapjs';
 
 export class LDAPService {
-  private client: Client | null = null;
+  private ldapUrl: string;
+  private baseDN: string;
+  private adminDN: string;
+  private adminPassword: string;
+  private timeout: number;
 
-  private createClient(): Client {
-    const client = ldap.createClient({
-      url: ldapConfig.url,
-      timeout: ldapConfig.timeout,
-      connectTimeout: ldapConfig.timeout
-    });
+  constructor() {
+    this.ldapUrl = process.env.LDAP_URL || '';
+    this.baseDN = process.env.LDAP_BASE_DN || '';
+    this.adminDN = process.env.LDAP_ADMIN_DN || '';
+    this.adminPassword = process.env.LDAP_ADMIN_PASSWORD || '';
+    this.timeout = parseInt(process.env.LDAP_TIMEOUT || '5000');
 
-    client.on('error', (err) => {
-      console.error('LDAP Client Error:', err);
-    });
-
-    return client;
-  }
-
-  private async bindAdmin(client: Client): Promise<void> {
-    return new Promise((resolve, reject) => {
-      client.bind(ldapConfig.adminDN, ldapConfig.adminPassword, (err) => {
-        if (err) {
-          reject(new Error(`LDAP Bind Error: ${err.message}`));
-        } else {
-          resolve();
-        }
-      });
-    });
-  }
-
-  async authenticate(username: string, password: string): Promise<boolean> {
-    const client = this.createClient();
-
-    try {
-      await this.bindAdmin(client);
-      const userDN = await this.findUserDN(client, username);
-      
-      if (!userDN) {
-        return false;
-      }
-
-      client.unbind();
-
-      const userClient = this.createClient();
-      
-      return new Promise((resolve) => {
-        userClient.bind(userDN, password, (err) => {
-          userClient.unbind();
-          
-          if (err) {
-            console.error('Auth failed:', err.message);
-            resolve(false);
-          } else {
-            resolve(true);
-          }
-        });
-      });
-    } catch (error) {
-      console.error('Authentication error:', error);
-      return false;
-    } finally {
-      if (client) {
-        client.unbind();
-      }
+    // Validação das configurações
+    if (!this.ldapUrl || !this.baseDN || !this.adminDN || !this.adminPassword) {
+      console.error('⚠️ Configurações LDAP incompletas no .env');
     }
   }
 
-  private async findUserDN(client: Client, username: string): Promise<string | null> {
-    const opts: SearchOptions = {
-      filter: `(|(cn=${username})(sAMAccountName=${username})(uid=${username}))`,
-      scope: 'sub',
-      attributes: ['dn']
-    };
-
-    return new Promise((resolve, reject) => {
-      client.search(ldapConfig.baseDN, opts, (err, res) => {
-        if (err) {
-          reject(err);
-          return;
-        }
-
-        let userDN: string | null = null;
-
-        res.on('searchEntry', (entry) => {
-          userDN = entry.objectName || null;
-        });
-
-        res.on('error', (err) => {
-          reject(err);
-        });
-
-        res.on('end', () => {
-          resolve(userDN);
-        });
-      });
+  /**
+   * Cria um cliente LDAP
+   */
+  private createClient(): any {
+    return ldap.createClient({
+      url: this.ldapUrl,
+      timeout: this.timeout,
+      connectTimeout: 5000,
     });
   }
 
-  async getUserInfo(username: string): Promise<any> {
+  /**
+   * Busca o DN (Distinguished Name) do usuário
+   */
+  private async findUserDN(username: string): Promise<{ dn: string; userData: any } | null> {
     const client = this.createClient();
 
     try {
-      await this.bindAdmin(client);
+      // Conecta como admin
+      await new Promise<void>((resolve, reject) => {
+        client.bind(this.adminDN, this.adminPassword, (err: any) => {
+          if (err) {
+            console.error('❌ Erro ao conectar admin:', err.message);
+            reject(err);
+          } else {
+            console.log('✅ Admin conectado');
+            resolve();
+          }
+        });
+      });
 
-      const opts: SearchOptions = {
-        filter: `(|(cn=${username})(sAMAccountName=${username})(uid=${username}))`,
+      // Busca o usuário
+      const searchFilter = `(|(sAMAccountName=${username})(userPrincipalName=${username}@*)(cn=${username})(mail=${username}))`;
+      
+      const opts: ldap.SearchOptions = {
+        filter: searchFilter,
         scope: 'sub',
-        attributes: ['cn', 'mail', 'displayName', 'sAMAccountAccount', 'memberOf']
+        attributes: [
+          'cn',
+          'displayName',
+          'mail',
+          'userPrincipalName',
+          'sAMAccountName',
+          'distinguishedName',
+          'memberOf',
+          'department'
+        ],
+        sizeLimit: 1
       };
 
-      return new Promise((resolve, reject) => {
-        client.search(ldapConfig.baseDN, opts, (err, res) => {
+      console.log(`🔎 Buscando usuário: ${username}`);
+
+      const result = await new Promise<{ dn: string; userData: any } | null>((resolve, reject) => {
+        client.search(this.baseDN, opts, (err: any, searchRes: any) => {
           if (err) {
-            reject(err);
-            return;
+            console.error('❌ Erro na busca:', err.message);
+            return reject(err);
           }
 
           let userData: any = null;
 
-          res.on('searchEntry', (entry) => {
-            userData = {
-              dn: entry.objectName,
-              cn: entry.attributes.find(attr => attr.type === 'cn')?.values[0],
-              email: entry.attributes.find(attr => attr.type === 'mail')?.values[0],
-              displayName: entry.attributes.find(attr => attr.type === 'displayName')?.values[0],
-              username: entry.attributes.find(attr => attr.type === 'sAMAccountName')?.values[0],
-              groups: entry.attributes.find(attr => attr.type === 'memberOf')?.values || []
-            };
+          searchRes.on('searchEntry', (entry: any) => {
+            const data: any = {};
+            entry.attributes.forEach((attr: any) => {
+              if (attr.values && attr.values.length > 0) {
+                data[attr.type] = attr.values.length === 1 ? attr.values[0] : attr.values;
+              }
+            });
+            userData = data;
+            console.log(`✅ Usuário encontrado: ${data.cn} (${data.distinguishedName})`);
           });
 
-          res.on('error', (err) => {
+          searchRes.on('error', (err: any) => {
+            console.error('❌ Erro no resultado:', err.message);
             reject(err);
           });
 
-          res.on('end', () => {
-            resolve(userData);
+          searchRes.on('end', () => {
+            if (!userData) {
+              console.log('❌ Usuário não encontrado');
+              resolve(null);
+            } else {
+              resolve({
+                dn: userData.distinguishedName,
+                userData: userData
+              });
+            }
           });
         });
       });
-    } catch (error) {
-      console.error('Get user info error:', error);
-      throw error;
-    } finally {
+
       client.unbind();
+      return result;
+
+    } catch (error) {
+      try {
+        client.unbind();
+      } catch (e) {
+        // Ignora erro de unbind
+      }
+      throw error;
     }
   }
 
+  /**
+   * Autentica o usuário no LDAP
+   */
+  async authenticate(username: string, password: string): Promise<boolean> {
+    try {
+      console.log(`\n🔐 Tentativa de autenticação: ${username}`);
+
+      // 1. Busca o DN do usuário
+      const userInfo = await this.findUserDN(username);
+      
+      if (!userInfo) {
+        console.log('❌ Usuário não encontrado no LDAP');
+        return false;
+      }
+
+      const { dn } = userInfo;
+
+      // 2. Tenta autenticar com as credenciais do usuário
+      const client = this.createClient();
+
+      const isAuthenticated = await new Promise<boolean>((resolve) => {
+        client.bind(dn, password, (err: any) => {
+          if (err) {
+            console.error('❌ Senha inválida:', err.message);
+            resolve(false);
+          } else {
+            console.log('✅ Autenticação bem-sucedida!');
+            resolve(true);
+          }
+        });
+      });
+
+      client.unbind();
+      return isAuthenticated;
+
+    } catch (error) {
+      console.error('❌ Erro na autenticação:', error);
+      return false;
+    }
+  }
+
+  /**
+   * Obtém informações do usuário
+   */
+  async getUserInfo(username: string): Promise<any> {
+    try {
+      console.log(`📋 Buscando informações do usuário: ${username}`);
+
+      const userInfo = await this.findUserDN(username);
+
+      if (!userInfo) {
+        return null;
+      }
+
+      const { userData } = userInfo;
+
+      // Extrai departamento dos grupos
+      const extractDepartment = (groups: any): string | null => {
+        if (!groups) return null;
+        const groupList = Array.isArray(groups) ? groups : [groups];
+        const firstGroup = groupList[0];
+        const parts = firstGroup.split(',');
+        
+        for (let part of parts) {
+          if (part.startsWith('OU=')) {
+            return part.replace('OU=', '');
+          }
+        }
+        return null;
+      };
+
+      const department = extractDepartment(userData.memberOf);
+
+      return {
+        username: userData.sAMAccountName || userData.cn,
+        fullName: userData.displayName || userData.cn,
+        email: userData.mail || userData.userPrincipalName,
+        department: department,
+        distinguishedName: userData.distinguishedName,
+        groups: userData.memberOf
+      };
+
+    } catch (error) {
+      console.error('❌ Erro ao buscar informações do usuário:', error);
+      return null;
+    }
+  }
+
+  /**
+   * Testa a conexão LDAP
+   */
   async testConnection(): Promise<boolean> {
     const client = this.createClient();
 
     try {
-      await this.bindAdmin(client);
-      return true;
-    } catch (error) {
-      console.error('LDAP connection test failed:', error);
-      return false;
-    } finally {
+      console.log('\n🔧 Testando conexão LDAP...');
+      console.log(`📡 URL: ${this.ldapUrl}`);
+      console.log(`👤 Admin DN: ${this.adminDN}`);
+      console.log(`📂 Base DN: ${this.baseDN}\n`);
+
+      const isConnected = await new Promise<boolean>((resolve) => {
+        client.bind(this.adminDN, this.adminPassword, (err: any) => {
+          if (err) {
+            console.error('❌ Falha na conexão:', err.message);
+            resolve(false);
+          } else {
+            console.log('✅ Conexão estabelecida com sucesso!');
+            resolve(true);
+          }
+        });
+      });
+
       client.unbind();
+      return isConnected;
+
+    } catch (error) {
+      console.error('❌ Erro ao testar conexão:', error);
+      try {
+        client.unbind();
+      } catch (e) {
+        // Ignora erro de unbind
+      }
+      return false;
     }
   }
 }
-
-
