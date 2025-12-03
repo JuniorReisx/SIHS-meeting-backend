@@ -15,6 +15,14 @@ export interface UserTypes {
   updated_at?: string;
 }
 
+export interface LDAPConfig {
+  url: string;
+  baseDN: string;
+  adminDN: string;
+  adminPassword: string;
+  timeout: number;
+}
+
 export interface AdminResponse {
   id: number;
   username: string;
@@ -93,14 +101,6 @@ export interface AuthResponse {
     displayName?: string;
     groups?: string[];
   };
-}
-
-export interface LDAPConfig {
-  url: string;
-  baseDN: string;
-  timeout: number;
-  adminDN?: string;
-  adminPassword?: string;
 }
 
 export interface LDAPUser {
