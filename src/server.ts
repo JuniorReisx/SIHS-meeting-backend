@@ -2,10 +2,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import type { Request, Response, NextFunction } from "express";
-import { authRouter } from "./routes/auth.routes";
+// import { authRouter } from "./routes/auth.routes";
 import { meetingRouter } from "./routes/meeting.routes";
 import { userRouter } from "./routes/user.routes";
 import { adminRouter } from "./routes/admin.routes";
+import { indexRouter } from "./routes/index.routes";
+// import { ldapRouter } from "./routes/ldap.routes";
 
 dotenv.config();
 
@@ -50,10 +52,13 @@ server.get("/health", (req: Request, res: Response) => {
 });
 
 // ========== ROTAS DA API ==========
-server.use("/api/auth", authRouter);
+// server.use("/api/auth", authRouter);
 server.use("/api/meetings", meetingRouter);
 server.use("/api/admin", adminRouter);
 server.use("/api/users", userRouter);
+server.use("/api/ldap", indexRouter);
+
+// server.use("/api/ldap", ldapRouter)
 
 server.use((req: Request, res: Response) => {
   res.status(404).json({

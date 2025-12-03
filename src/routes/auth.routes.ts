@@ -1,21 +1,49 @@
-import { Router } from "express";
-import { authController } from "../controllers/auth.controllers";
+import { Router } from 'express';
+import { AuthController } from '../controllers/auth.controllers';
+import { LDAPDebug } from '../utils/ldap.debug';
 
 export const authRouter = Router();
+const authController = new AuthController();
 
-// ========== ROTAS DE AUTENTICAÇÃO ==========
-// POST /api/auth/login - Login via LDAP
-authRouter.post("/login", authController.login.bind(authController));
+// Rotas originais
+authRouter.post('/login', (req, res) => authController.login(req, res));
+authRouter.get('/ldap/test', (req, res) => authController.testConnection(req, res));
 
-// POST /api/auth/logout - Logout do usuário
-authRouter.post("/logout", authController.logout.bind(authController));
+// Nova rota de diagnóstico completo
+authRouter.get('/ldap/debug', async (req, res) => {
+  try {
+    console.log('\n🔧 Iniciando diagnóstico LDAP...\n');
+    await LDAPDebug.runFullDiagnostic();
+    
+    res.json({
+      success: true,
+      message: 'Diagnóstico completo! Verifique o console do servidor.'
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao executar diagnóstico',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
-// ========== ROTAS DE VERIFICAÇÃO ==========
-// POST /api/auth/verify - Verificar se usuário existe
-authRouter.post("/verify", authController.verifyUser.bind(authController));
+// Rota para testar busca de usuário específico
+authRouter.get('/ldap/debug/user/:username', async (req, res) => {
+  try {
+    await LDAPDebug.testUserSearch(req.params.username);
+    
+    res.json({
+      success: true,
+      message: 'Busca completa! Verifique o console do servidor.',
+      username: req.params.username
+    });
+  } catch (error) {
+    res.status(500).json({
+      success: false,
+      message: 'Erro ao buscar usuário',
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
 
-// GET /api/auth/search?query=nome - Buscar usuários
-authRouter.get("/search", authController.searchUsers.bind(authController));
-
-// GET /api/auth/status - Status do serviço LDAP
-authRouter.get("/status", authController.checkStatus.bind(authController));
