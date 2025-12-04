@@ -26,8 +26,8 @@ export interface LDAPConfig {
 export interface AdminResponse {
   id: number;
   username: string;
-  createdAt: string;
-  updatedAt: string;
+  created_at: string;
+  updated_at: string;
 }
 
 export interface MeetingTypes {
@@ -126,3 +126,82 @@ export interface AuthResponse {
     groups?: string[];
   };
 }
+
+export interface MeetingConfirmedTypes {
+  id: number;
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
+  description?: string;
+  responsible: string;
+  responsible_department: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateMeetingConfirmedInput {
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
+  description?: string;
+  responsible: string;
+  responsible_department: string;
+}
+
+export interface UpdateMeetingConfirmedInput {
+  title?: string;
+  meeting_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  participants_count?: number;
+  description?: string;
+  responsible?: string;
+  responsible_department?: string;
+}
+
+export interface MeetingPendingTypes {
+  id: number;
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
+  description?: string;
+  responsible: string;
+  responsible_department: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface CreateMeetingPendingInput {
+  title: string;
+  meeting_date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  participants_count: number;
+  description?: string;
+  responsible: string;
+  responsible_department: string;
+}
+
+export interface UpdateMeetingPendingInput {
+  title?: string;
+  meeting_date?: string;
+  start_time?: string;
+  end_time?: string;
+  location?: string;
+  participants_count?: number;
+  description?: string;
+  responsible?: string;
+  responsible_department?: string;
+}
+

@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { Admin } from "../models/admin.models";
+import { Admin } from "../../models/admins.models";
 
 export class AdminController {
   async create(req: Request, res: Response) {

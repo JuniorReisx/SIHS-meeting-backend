@@ -1,5 +1,5 @@
 import { Request, Response } from "express";
-import { LDAPService } from "../services/ldapService";
+import { LDAPService } from "../../services/ldapService";
 
 const ldapService = new LDAPService();
 

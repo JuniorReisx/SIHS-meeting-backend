@@ -1,6 +1,6 @@
 import { Router } from "express";
 import ldap from "ldapjs";
-import { AuthController } from "../controllers/auth.controllers";
+import { AuthController } from "../controllers/auth/auth.controllers";
 import { LDAPDebug } from "../utils/ldap.debug";
 
 export const authRouter = Router();
@@ -8,12 +8,12 @@ const authController = new AuthController();
 
 // Rotas originais
 authRouter.post("/login", (req, res) => authController.login(req, res));
-authRouter.get("/ldap/test", (req, res) =>
+authRouter.get("/test", (req, res) =>
   authController.testConnection(req, res)
 );
 
 // Nova rota de diagnóstico completo
-authRouter.get("/ldap/debug", async (req, res) => {
+authRouter.get("/debug", async (req, res) => {
   try {
     console.log("\n🔧 Iniciando diagnóstico LDAP...\n");
     await LDAPDebug.runFullDiagnostic();
@@ -32,7 +32,7 @@ authRouter.get("/ldap/debug", async (req, res) => {
 });
 
 // Rota para testar busca de usuário específico
-authRouter.get("/ldap/debug/user/:username", async (req, res) => {
+authRouter.get("/debug/user/:username", async (req, res) => {
   try {
     await LDAPDebug.testUserSearch(req.params.username);
 
@@ -51,7 +51,7 @@ authRouter.get("/ldap/debug/user/:username", async (req, res) => {
 });
 
 // Rota para buscar informações completas do usuário
-authRouter.get('/ldap/user/:username', async (req, res) => {
+authRouter.get('/user/:username', async (req, res) => {
   const username = req.params.username;
 
   // Validação básica

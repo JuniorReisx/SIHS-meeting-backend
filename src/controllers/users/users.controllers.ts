@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { User } from "../models/user.models";
+import { User } from "../../models/users.models";
 
 export class UserController {
   async create(req: Request, res: Response) {

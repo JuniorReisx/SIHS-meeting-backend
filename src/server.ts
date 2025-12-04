@@ -2,10 +2,12 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import type { Request, Response, NextFunction } from "express";
-import { meetingRouter } from "./routes/meeting.routes";
 import { userRouter } from "./routes/user.routes";
 import { adminRouter } from "./routes/admin.routes";
 import { authRouter } from "./routes/auth.routes";
+import { meetingsConfirmedRouter } from "./routes/meetingsConfirmed.routes";
+import { meetingsPendingRouter } from "./routes/meetingsPending.routes";
+import { meetingsDeniedRouter } from "./routes/meetingsDenied.routes";
 
 dotenv.config();
 
@@ -50,7 +52,9 @@ server.get("/health", (req: Request, res: Response) => {
 });
 
 
-server.use("/api/meetings", meetingRouter);
+server.use("/api/meetingsConfirmed", meetingsConfirmedRouter);
+server.use("/api/meetingsPending", meetingsPendingRouter);
+server.use("/api/meetingsDenied", meetingsDeniedRouter);
 server.use("/api/admin", adminRouter);
 server.use("/api/users", userRouter);
 server.use("/api/ldap", authRouter);
