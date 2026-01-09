@@ -8,6 +8,7 @@ import { authRouter } from "./routes/auth.routes";
 import { meetingsConfirmedRouter } from "./routes/meetingsConfirmed.routes";
 import { meetingsPendingRouter } from "./routes/meetingsPending.routes";
 import { meetingsDeniedRouter } from "./routes/meetingsDenied.routes";
+import { meetingsTotalRouter } from "./routes/meetingsTotal.routes"; // ✅ ADICIONE ISSO
 
 dotenv.config();
 
@@ -51,10 +52,10 @@ server.get("/health", (req: Request, res: Response) => {
   });
 });
 
-
 server.use("/api/meetingsConfirmed", meetingsConfirmedRouter);
 server.use("/api/meetingsPending", meetingsPendingRouter);
 server.use("/api/meetingsDenied", meetingsDeniedRouter);
+server.use("/api/meetingsTotal", meetingsTotalRouter);
 server.use("/api/admin", adminRouter);
 server.use("/api/users", userRouter);
 server.use("/api/ldap", authRouter);
@@ -128,3 +129,4 @@ process.on("SIGINT", () => {
 startServer();
 
 export default server;
+      
